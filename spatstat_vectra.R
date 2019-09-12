@@ -8,24 +8,26 @@ library(zoo)
 
 # phenotype can be converted by the "phenotype argument".
 # why statistics was used as argument?
-do_analyse <- function(Intable, phenotype = NULL, plotter = FALSE, ...) {
+do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL, plotter = FALSE, 
+		       XposCol = 'Cell X Position', YposCol = 'Cell Y Position',
+		       PhenoCol = 'Phenotype', ...) {
   
-  csd <- Intable
+  csd <- Intable[, c(PhenoCol, XposCol, YposCol)]
+  colnames(csd) = c('Phenotype', 'Cell X Position',  'Cell Y Position')
   pheno_vector = unique(csd$Phenotype)
-  pheno_vector = pheno_vector[order(match(pheno_vector,pheno_vector_absolut))]
+
+  if (is.null(PhenoOrder)) {
+	  PhenoOrder = pheno_vector # if no order is set, just take the order from data
+  }
+
+  pheno_vector = pheno_vector[order(match(pheno_vector,PhenoOrder))]
 
   # Replace phenotype label by definition
   if (!is.null(phenotype)) {
 	  for(pheno in names(phenotype)) {
-		  if (!pheno %in% csd$Phenotype) {
-			  stop(paste0("Unknown phenotype - ", pheno))
-		  } else {
-			  csd$Phenotype[[pheno]] = phenotype[[pheno]]
-		  }
+		csd$Phenotype[[pheno]] = phenotype[[pheno]]
 	  }
   }
-
-
   # Replace "+" with "T" and "-" with "F" in the vector and csd
   pheno_vector = str_replace_all(pheno_vector,"[+]","T")
   pheno_vector = str_replace_all(pheno_vector,"[-]","F")
@@ -45,21 +47,27 @@ do_analyse <- function(Intable, phenotype = NULL, plotter = FALSE, ...) {
   # names(csd[,1:6])
   # [1] "Cell X Position" "Cell Y Position" "Cell ID"         "Path"            "Sample Name"     "Phenotype" 
   
-  csd_ppp = ppp(x=csd[["Cell X Position"]], y=csd[["Cell Y Position"]],
-                window = owin(c(0, max(csd[["Cell X Position"]])),
-                              c(0, max(csd[["Cell Y Position"]]))),
-                marks = as.factor(csd[["Phenotype"]]))
+  csd_ppp = ppp(x=csd[['Cell X Position']], y=csd[['Cell Y Position']],
+                window = owin(c(0, max(csd[['Cell X Position']])),
+                              c(0, max(csd[['Cell Y Position']]))),
+                marks = as.factor(csd[['Phenotype']]))
   if (plotter == TRUE){
-    plot1 = plot(csd_ppp, cols = c("magenta","brown","red","blue","green","yellow","gray","pink","orange","cyan"),
+    plot1 = plot(csd_ppp, cols = Cols,
                main = paste("Coordinates of cells and their phenotype in sample", sample_name), pch = 20)
   }
   # define all inbuild statistics
   options = c("G","F", "J","Gdot", "Jdot", "K", "L", "pcf", "Kdot", "Ldot")
   # options = c("pcf", "G", "Jcross", "Kcross", "Lcross", "Gdot", "Jdot", "Kdot", "Ldot")
-  
+ 
+
+  dim_n = length(PhenoOrder)
+  dim_m = 2*dim_n + 2
+  print(dim_n)
+
+
   statistics = as.data.frame(matrix(rep(0,dim_n*dim_m),dim_n, dim_m))
-  colnames(statistics) = c(paste("Area K",pheno_vector_absolut),"Area Kdot", paste("Maxnorm K",pheno_vector_absolut), "Maxnorm Kdot")
-  rownames(statistics) = pheno_vector_absolut
+  colnames(statistics) = c(paste("Area K", PhenoOrder),"Area Kdot", paste("Maxnorm K", PhenoOrder), "Maxnorm Kdot")
+  rownames(statistics) = PhenoOrder
   # colnames(statistics) = c(paste("Area K",pheno_vector_absolut_TF),"Area Kdot", paste("Maxnorm K",pheno_vector_absolut_TF), "Maxnorm Kdot")
   # rownames(statistics) = pheno_vector_absolut_TF  
   values_options = list()
@@ -123,7 +131,7 @@ do_analyse <- function(Intable, phenotype = NULL, plotter = FALSE, ...) {
     #   }
     }
   
-  return(c(statistics, values_options, missing_list))
+  return(c(statistics, values_options))
 }
 
 ######### RUN function for calculating area and Maxnorm #####

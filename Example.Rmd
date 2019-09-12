@@ -1,0 +1,57 @@
+
+---
+title: "Main script Erik Vectra analysis"
+output:
+  html_document:
+    toc: yes
+---
+
+
+```{r load_package}
+source('spatstat_vectra/spatstat_vectra.R')
+```
+
+```{r load_data, cache=T}
+#base_path <- system.file("extdata", "samples", package = "phenoptrExamples")
+base_path <- '../data/Exported data tables/'
+paths <- list_cell_seg_files(base_path)
+paste("There are", length(paths), "paths currently loaded")
+
+
+csd <- purrr::map_df(paths, read_cell_seg_data) # no tif applied?
+# dim(csd)
+
+phenos <- unique(csd$Phenotype)
+csd <- csd %>%
+  group_by(`Sample Name`) %>%
+  do(bind_cols(., find_nearest_distance(., phenos)))
+
+paste("dimensions of the data is", dim(csd)[1], "times", dim(csd)[2]) # 1805834 197
+merged_filtered = csd %>% filter(Phenotype != "")
+paste("dimensions of the data is", dim(merged_filtered)[1], "times", dim(merged_filtered)[2]) #1805653 197
+
+merged_filtered_with_distance <- merged_filtered %>%
+  group_by(`Sample Name`) %>%
+  do(bind_cols(., find_nearest_distance(.)))
+paste("dimensions of the data is", dim(merged_filtered_with_distance)[1], "times", dim(merged_filtered_with_distance)[2]) #1805653 217
+
+```
+
+```{r extreme_cases}
+
+pheno_vector_absolut = c("CD163+PDL1-","CD163+PDL1+","CD3+CD8-PD1-", "CD3+CD8-PD1+", "CD3+CD8+PD1-", "CD3+CD8+PD1+","Other","Other PDL1+","PAX5+PDL1-", "PAX5+PDL1+")
+Cols = c("magenta","brown","red","blue","green","yellow","gray","pink","orange","cyan")
+
+# HO105-194
+sample_name = "HO105-194_[16067,37856].im3" # PD-L1 positive cluster + Tumor cluster
+out = do_analyse(merged_filtered_with_distance %>% filter(`Sample Name` == sample_name), 
+	   PhenoOrder = pheno_vector_absolut, Cols = Cols, plotter = TRUE)
+sample_name = "HO105-194_[15564,37856].im3" # PD-L1 positive cluster + Tumor cluster
+out = do_analyse(merged_filtered_with_distance %>% filter(`Sample Name` == sample_name), 
+	   PhenoOrder = pheno_vector_absolut, Cols = Cols, plotter = TRUE)
+sample_name = "HO105-194_[16029,38205].im3" # not clustered
+out = do_analyse(merged_filtered_with_distance %>% filter(`Sample Name` == sample_name), 
+	   PhenoOrder = pheno_vector_absolut, Cols = Cols, plotter = TRUE)
+
+```
+
