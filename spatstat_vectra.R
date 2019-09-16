@@ -8,7 +8,8 @@ library(zoo)
 
 # phenotype can be converted by the "phenotype argument".
 # why statistics was used as argument?
-do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL, plotter = FALSE, 
+do_analyse <- function(Intable, sample_name = 'NULL',
+		       PhenoOrder = NULL, Cols = NULL, phenotype = NULL, plotter = FALSE, 
 		       XposCol = 'Cell X Position', YposCol = 'Cell Y Position',
 		       PhenoCol = 'Phenotype', ...) {
   
@@ -21,6 +22,10 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
   }
 
   pheno_vector = pheno_vector[order(match(pheno_vector,PhenoOrder))]
+
+  if (is.null(sample_name)) {
+	  sample_name = 'InputTable'
+  }
 
   # Replace phenotype label by definition
   if (!is.null(phenotype)) {
