@@ -10,11 +10,14 @@ library(zoo)
 # why statistics was used as argument?
 do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL, plotter = FALSE, 
                        XposCol = 'Cell X Position', YposCol = 'Cell Y Position',
-                       PhenoCol = 'Phenotype', ...) {
-  sample_name = unique(Intable$`Sample Name`)
+                       PhenoCol = 'Phenotype', sample_name = NULL ...) {
   csd <- Intable[, c(PhenoCol, XposCol, YposCol)]
   colnames(csd) = c('Phenotype', 'Cell X Position',  'Cell Y Position')
   pheno_vector = unique(csd$Phenotype)
+
+  if (is.null(sample_name)) {
+	  sample_name = 'Input sample'
+  }
   
   if (is.null(PhenoOrder)) {
     PhenoOrder = pheno_vector # if no order is set, just take the order from data
@@ -36,7 +39,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
   csd$Phenotype = str_replace_all(csd$Phenotype,"[-]","F")
   
   n=length(pheno_vector)  
-  sample_name = str_replace(sample_name,".im3","")
+  #sample_name = str_replace(sample_name,".im3","")
   
   
   # filter first two columns out to convert to ppp as column 1 and 2 are assumed respectively X and Y coordinates and move them in front
