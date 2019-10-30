@@ -55,6 +55,11 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
     plot1 = plot(csd_ppp, cols = Cols,
                  main = paste("Coordinates of cells and their phenotype in sample", sample_name), pch = 20)
   }
+  
+    
+  distances = pairdist(csd_ppp)
+  
+  
   # define all inbuild statistics
   options = c("G","F", "J","Gdot", "Jdot", "K", "L", "pcf", "Kdot", "Ldot")
   # options = c("pcf", "G", "Jcross", "Kcross", "Lcross", "Gdot", "Jdot", "Kdot", "Ldot")
@@ -72,13 +77,11 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
   values_options = list()
   
   all_types_options_sample_name = list()
-  # print("loop 1: option")
   
   for (option in options){
     # print(option)
     all_types = alltypes(csd_ppp,fun = paste(option), dataname = sample_name, envelope = FALSE)
-    # print(length(all_types$fns))
-    
+    # print(length(all_types$fns))    
     all_types_options_sample_name[[option]] = all_types
     if (plotter[2] == TRUE){
       plot(all_types)
@@ -89,63 +92,37 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
     r_close_list = output[1]
     statistic_close_list = output[2]
     
-    # print("einde loop 3")
-    # print("r_close_list")
-    # print(r_close_list)
-    # print("statistic_close_list")
-    # print(statistic_close_list)
-    
-    
-    
-    # print(((option == "K") || (option == "Kdot")))
-    # if ((option == "K") || (option == "Kdot")){
-    #   for (pheno_row in pheno_vector){
-    #     # K_self = Kest(csd_ppp[csd_ppp$marks == paste(pheno_row)], correction = "border")
-    #     
-    #     i = which(pheno_vector %in% pheno_row)
-    #     
-    #     position = all_types[[2]][i,i]
-    #     
-    #     K_self = all_types[[1]][[position]]
-    #     # K_self = Kcs[1+(i-1)*(n+1)][[1]] # [["border"]]
-    #     temp = calculate_area_norm(K_self, option)
-    #     statistics[paste(pheno_row), paste("Area K",pheno_row)] = temp[1]
-    #     statistics[paste(pheno_row), paste("Maxnorm K",pheno_row)] = temp[2]
-    #     
-    #     if (option == "Kdot"){
-    #       # # K_dot = Kdot(csd_ppp,pheno_row, correction = "border")
-    #       position = all_types[[2]][i]
-    #       
-    #       K_dot = all_types[[1]][position]
-    #       temp = calculate_area_norm(K_dot, option)
-    #       statistics[paste(pheno_row), "Area Kdot"] = temp[1]
-    #       statistics[paste(pheno_row), "Maxnorm Kdot"] = temp[2]
-    #     }
-    #     # if (option == "Ldot"){
-    #     #   # # L_dot = Ldot(csd_ppp,pheno_row, correction = "border")
-    #     #   L_dottemp1 = all_types[[2]]
-    #     #   L_dot = L_dottemp1[[paste(pheno_row)]]# [["border"]]
-    #     #   temp = calculate_area_norm(L_dot)
-    #     #   statistics[paste(pheno_row), "Area Ldot"] = temp[1] # no Ldot in statistics yet
-    #     #   statistics[paste(pheno_row), "Maxnorm Ldot"] = temp[2]
-    #     # }
-    #     pheno_dummy = pheno_vector[pheno_row != pheno_vector]
-    #     for (pheno_col in pheno_vector[pheno_row != pheno_vector]){
-    #       # K_cross = Kcross(csd_ppp,pheno_row,pheno_col, correction = "border")
-    #       
-    #       j = which(pheno_vector %in% pheno_col)
-    #       position = all_types[[2]][i,j]  # out of bounds, less phenotypes plotted, maybe because of + en - signs.
-    #       K_cross = all_types[[1]][[position]] #      Kcs[paste(pheno_row),paste(pheno_col)][["border"]]
-    #       
-    #       temp = calculate_area_norm(K_cross, option)
-    #       statistics[paste(pheno_row), paste("Area K",pheno_col)] = temp[1]
-    #       statistics[paste(pheno_row), paste("Maxnorm K",pheno_col)] = temp[2]
-    #     }
-    #   }
   }
   
   return(output)
 }
+
+
+# function for retreiving the Median Absolute Deviation distance for each phenotype
+getMAD <- function(data, pheno_vector){
+  MED = matrix(NA , nrow = length(pheno_vector), ncol = length(pheno_vector))
+  colnames(MED) = pheno_vector
+  rownames(MED) = pheno_vector
+
+  MAD = matrix(NA , nrow = length(pheno_vector), ncol = length(pheno_vector))
+  colnames(MAD) = pheno_vector
+  rownames(MAD) = pheno_vector
+  
+  for (from in pheno_vector){
+    data1 = data %>% filter(`Phenotype` == from)
+    
+    for (to in pheno_vector){
+      distances = data1[[paste("Distance to",to)]]
+      
+      MED[paste(from), paste(to)] = median(distances)
+      MAD[paste(from), paste(to)] = mad(distances)
+    }
+  }
+  paste("MED", MED)
+  paste("MAD", MAD)
+  return(c(MED, MAD))
+}
+
 # function for receiving the counts of the phenotypes in the sample and their density
 getDensity <- function(data, pheno_vector,phenoOrder, Area_sample){
   counts_sample = rep(0,length(phenoOrder))
@@ -217,8 +194,6 @@ interpolate_r <- function(all_types, r_vec, option){
   }
   return(c(r_close_list, statistic_close_list))
 }
-
-
 
 ######### RUN function for calculating area and Maxnorm #####
 calculate_area_norm <- function (ripleys, option){
