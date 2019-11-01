@@ -8,9 +8,9 @@ library(zoo)
 
 # phenotype can be converted by the "phenotype argument".
 # why statistics was used as argument?
-do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL, plotter = FALSE, 
+do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL, plotter = c(FALSE,FALSE), 
                        XposCol = 'Cell X Position', YposCol = 'Cell Y Position',
-                       PhenoCol = 'Phenotype', sample_name = NULL ...) {
+                       PhenoCol = 'Phenotype', sample_name = NULL, ...) {
   csd <- Intable[, c(PhenoCol, XposCol, YposCol)]
   colnames(csd) = c('Phenotype', 'Cell X Position',  'Cell Y Position')
   pheno_vector = unique(csd$Phenotype)
@@ -67,7 +67,6 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
   
   dim_n = length(PhenoOrder)
   dim_m = 2*dim_n + 2
-  print(dim_n)
   
   
   statistics = as.data.frame(matrix(rep(0,dim_n*dim_m),dim_n, dim_m))
@@ -75,7 +74,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
   rownames(statistics) = PhenoOrder
   
   values_options = list()
-  
+  r_vec = 10
   all_types_options_sample_name = list()
   
   for (option in options){
@@ -89,12 +88,12 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
     
     output = interpolate_r(all_types, r_vec, option)
     
-    r_close_list = output[1]
-    statistic_close_list = output[2]
-    
+    # r_close_list = output[1]
+    # statistic_close_list = output[2]
+    # 
   }
   
-  return(output)
+  return(c(distances, output))
 }
 
 
@@ -142,6 +141,8 @@ getDensity <- function(data, pheno_vector,phenoOrder, Area_sample){
 
 # function interpolate statistic for given r
 interpolate_r <- function(all_types, r_vec, option){
+  r_close_list = list()
+  statistic_close_list = list()
   for (r_i in r_vec){
     r_close_list[[option]][[paste("radius", r_i)]] = list()
     statistic_close_list[[option]][[paste("radius", r_i)]] = list()
@@ -149,32 +150,42 @@ interpolate_r <- function(all_types, r_vec, option){
     for (range in (1:length(all_types$fns))){
       # print("inside loops, test r_emperic")
       # print(all_types_options[[option]][["fns"]][[range]][["r"]])
+      
+      
+      
+      
       r_emperic = all_types[["fns"]][[range]][["r"]]
       
-      dif = abs(r_emperic - r_i)
+      dif = r_emperic - r_i
+      dif_abs = abs(dif)
+      condition = match(min(dif_abs),dif_abs)
+      if (dif[condition]>0){
+        left = condition -1
+        right = condition
+      }else{
+        left = condition
+        right = condition +1
+      }
       
-      index1 = match(min(dif),dif)
-      
-      index2 = index1 + 1
-      r1 = r_emperic[index1]
-      r2 = r_emperic[index2]
-      # print(c(r1,r2))
+      r1 = r_emperic[left]
+      r2 = r_emperic[right]
+      print(c(r1,r2))
       
       
       r_close_list[[option]][[paste("radius", r_i)]][[paste(option, "fns which",range)]] = r_i
       
       
       if ((option == "K")|| (option == "L") || (option == "Kdot")|| (option == "Ldot")){
-        stat1 = all_types[["fns"]][[range]][["border"]][index1]
-        stat2 = all_types[["fns"]][[range]][["border"]][index2]
+        stat1 = all_types[["fns"]][[range]][["border"]][left]
+        stat2 = all_types[["fns"]][[range]][["border"]][right]
         
-        a = (stat2-stat1)/(r2-r1)
+        a = (stat2-stat1)/(r2-r1) # y=ax+b
         b = stat2 - a*r2
         stat = a*(r_i-r2)+stat2
         statistic_close_list[[option]][[paste("radius", r_i)]][[option]][[paste(option, "fns which",range)]] = stat
       } else if (option == "pcf"){
-        stat1 = all_types[["fns"]][[range]][["trans"]][index1]
-        stat2 = all_types[["fns"]][[range]][["trans"]][index2]
+        stat1 = all_types[["fns"]][[range]][["trans"]][left]
+        stat2 = all_types[["fns"]][[range]][["trans"]][right]
         
         a = (stat2-stat1)/(r2-r1)
         b = stat2 - a*r2
@@ -182,8 +193,8 @@ interpolate_r <- function(all_types, r_vec, option){
         
         statistic_close_list[[option]][[paste("radius", r_i)]][[option]][[paste(option, "fns which",range)]] = stat
       } else{
-        stat1 = all_types[["fns"]][[range]][["rs"]][index1]
-        stat2 = all_types[["fns"]][[range]][["rs"]][index2]
+        stat1 = all_types[["fns"]][[range]][["rs"]][left]
+        stat2 = all_types[["fns"]][[range]][["rs"]][right]
         
         a = (stat2-stat1)/(r2-r1)
         b = stat2 - a*r2
@@ -193,6 +204,150 @@ interpolate_r <- function(all_types, r_vec, option){
     }
   }
   return(c(r_close_list, statistic_close_list))
+}
+
+
+# Calculate the mean shortest distance for each pair of types, including itself
+calculate_mean <- function(csd, pheno_vector, pheno_vector_absoluut, plotter){
+  
+  
+  # calculate for each type of cell the mean distance to another type (inclusive itself). for all possible types in all the data.
+  
+  statistic_mean_sample_name = as.data.frame(matrix(rep(0,length(pheno_vector_absoluut)^2),c(length(pheno_vector_absoluut),length(pheno_vector_absoluut))))
+  colnames(statistic_mean_sample_name) = paste("Mean shortest distance to",pheno_vector_absoluut)
+  rownames(statistic_mean_sample_name) = pheno_vector_absoluut
+  
+  for (i in pheno_vector){
+    if ("PAX5+PDL1+" %in% pheno_vector){
+      dummy = csd %>%
+        filter((`Phenotype` == i))
+      statistic_mean_sample_name[i,"Mean shortest distance to PAX5+PDL1+"] = mean(dummy$`Distance to PAX5+PDL1+`)
+      
+      if (plotter[1] == TRUE){
+        hist(csd$`Distance to PAX5+PDL1+`[csd$Phenotype == i],
+             main = paste(i,"to PAX5+PDL1+"), ylab = "distance to PAX5+PDL1+")
+        boxplot(csd$`Distance to PAX5+PDL1+`[csd$Phenotype == i],
+                main = paste(i,"to PAX5+PDL1+"), ylab = "distance to PAX5+PDL1+")
+      }
+    }
+    
+    if ("PAX5+PDL1-" %in% pheno_vector){
+      dummy = csd %>%
+        filter((`Phenotype` == i))
+      statistic_mean_sample_name[i,"Mean shortest distance to PAX5+PDL1-"] = mean(dummy$`Distance to PAX5+PDL1-`)
+      
+      if (plotter[1] == TRUE){
+        hist(csd$`Distance to PAX5+PDL1-`[csd$Phenotype == i],
+             main = paste(i,"to PAX5+PDL1-"), ylab = "distance to PAX5+PDL1-")
+        boxplot(csd$`Distance to PAX5+PDL1-`[csd$Phenotype == i],
+                main = paste(i,"to PAX5+PDL1-"), ylab = "distance to PAX5+PDL1-")
+      }
+    }
+    
+    if ("CD163+PDL1+" %in% pheno_vector){
+      dummy = csd %>%
+        filter((`Phenotype` == i))
+      statistic_mean_sample_name[i,"Mean shortest distance to CD163+PDL1+"] = mean(dummy$`Distance to CD163+PDL1+`)
+      
+      if (plotter[1] == TRUE){
+        hist(csd$`Distance to CD163+PDL1+`[csd$Phenotype == i],
+             main = paste(i,"to CD163+PDL1+"), ylab = "distance to CD163+PDL1+")
+        boxplot(csd$`Distance to CD163+PDL1+`[csd$Phenotype == i],
+                main = paste(i,"to CD163+PDL1+"), ylab = "distance to CD163+PDL1+")
+      }
+    }
+    
+    if ("CD163+PDL1-" %in% pheno_vector){
+      dummy = csd %>%
+        filter((`Phenotype` == i))
+      statistic_mean_sample_name[i,"Mean shortest distance to CD163+PDL1-"] = mean(dummy$`Distance to CD163+PDL1-`)
+      
+      if (plotter[1] == TRUE){
+        hist(csd$`Distance to CD163+PDL1-`[csd$Phenotype == i],
+             main = paste(i,"to CD163+PDL1-"), ylab = "distance to CD163+PDL1-")
+        boxplot(csd$`Distance to CD163+PDL1-`[csd$Phenotype == i],
+                main = paste(i,"to CD163+PDL1-"), ylab = "distance to CD163+PDL1-")
+      }
+    }
+    
+    if ("Other PDL1+" %in% pheno_vector){
+      dummy = csd %>%
+        filter((`Phenotype` == i))
+      statistic_mean_sample_name[i,"Mean shortest distance to Other PDL1+"] = mean(dummy$`Distance to Other PDL1+`)
+      
+      if (plotter[1] == TRUE){
+        hist(csd$`Distance to Other PDL1+`[csd$Phenotype == i],
+             main = paste(i,"to Other PDL1+"), ylab = "distance to Other PDL1+")
+        boxplot(csd$`Distance to Other PDL1+`[csd$Phenotype == i],
+                main = paste(i,"to Other PDL1+"), ylab = "distance to Other PDL1+")
+      }
+    }
+    
+    if ("Other" %in% pheno_vector){
+      dummy = csd %>%
+        filter((`Phenotype` == i))
+      statistic_mean_sample_name[i,"Mean shortest distance to Other"] = mean(dummy$`Distance to Other`)
+      
+      if (plotter[1] == TRUE){
+        hist(csd$`Distance to Other`[csd$Phenotype == i],
+             main = paste(i,"to Other"), ylab = "distance to Other")
+        boxplot(csd$`Distance to Other`[csd$Phenotype == i],
+                main = paste(i,"to Other"), ylab = "distance to Other")
+      }
+    }
+    
+    if ("CD3+CD8+PD1+" %in% pheno_vector){
+      dummy = csd %>%
+        filter((`Phenotype` == i))
+      statistic_mean_sample_name[i,"Mean shortest distance to CD3+CD8+PD1+"] = mean(dummy$`Distance to CD163+PDL1+`)
+      
+      if (plotter[1] == TRUE){
+        hist(csd$`Distance to CD3+CD8+PD1+`[csd$Phenotype == i])
+        boxplot(csd$`Distance to CD3+CD8+PD1+`[csd$Phenotype == i],
+                main = paste(i,"to  CD3+CD8+PD1+"), ylab = "distance to CD3+CD8+PD1+")
+      }
+    }
+    
+    if ("CD3+CD8+PD1-" %in% pheno_vector){
+      dummy = csd %>%
+        filter((`Phenotype` == i))
+      statistic_mean_sample_name[i,"Mean shortest distance to CD3+CD8+PD1-"] = mean(dummy$`Distance to CD3+CD8+PD1-`)
+      
+      if (plotter[1] == TRUE){
+        hist(csd$`Distance to CD3+CD8+PD1-`[csd$Phenotype == i],
+             main = paste(i,"to  CD3+CD8+PD1-"), ylab = "distance to CD3+CD8+PD1-")
+        boxplot(csd$`Distance to CD3+CD8+PD1-`[csd$Phenotype == i],
+                main = paste(i,"to  CD3+CD8+PD1-"), ylab = "distance to CD3+CD8+PD1-")
+      }
+    }
+    
+    if ("CD3+CD8-PD1+" %in% pheno_vector){
+      dummy = csd %>%
+        filter((`Phenotype` == i))
+      statistic_mean_sample_name[i,"Mean shortest distance to CD3+CD8-PD1+"] = mean(dummy$`Distance to CD3+CD8-PD1+`)
+      
+      if (plotter[1] == TRUE){
+        hist(csd$`Distance to CD3+CD8-PD1+`[csd$Phenotype == i],
+             main = paste(i,"to  CD3+CD8-PD1+"), ylab = "distance to CD3+CD8-PD1+")
+        boxplot(csd$`Distance to CD3+CD8-PD1+`[csd$Phenotype == i],
+                main = paste(i,"to  CD3+CD8-PD1+"), ylab = "distance to CD3+CD8-PD1+")
+      }
+    }
+    
+    if ("CD3+CD8-PD1-" %in% pheno_vector){
+      dummy = csd %>%
+        filter((`Phenotype` == i))
+      statistic_mean_sample_name[i,"Mean shortest distance to CD3+CD8-PD1-"] = mean(dummy$`Distance to CD3+CD8-PD1-`)
+      
+      if (plotter[1] == TRUE){
+        hist(csd$`Distance to CD3+CD8-PD1-`[csd$Phenotype == i],
+             main = paste(i,"to  CD3+CD8-PD1-"), ylab = "distance to CD3+CD8-PD1-")
+        boxplot(csd$`Distance to CD3+CD8-PD1-`[csd$Phenotype == i],
+                main = paste(i,"to  CD3+CD8-PD1-"), ylab = "distance to CD3+CD8-PD1-")
+      }
+    }
+  }
+  return(statistic_mean_sample_name)
 }
 
 ######### RUN function for calculating area and Maxnorm #####
