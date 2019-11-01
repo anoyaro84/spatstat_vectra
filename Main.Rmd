@@ -1,0 +1,264 @@
+---
+title: "Main script Erik Vectra analysis"
+output:
+  html_document:
+    toc: yes
+---
+
+```{r source files}
+source('spatstat_vectra.R')
+
+```
+
+```{r RUN import files method Erik dependent on .Rdata, echo=FALSE, eval=TRUE}
+######### RUN import files method Erik#########
+
+# getwd()
+# # path = "C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables"
+# path = "C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping"
+# setwd(path)
+
+# load merged_data.Rdata
+
+paths <- list_cell_seg_files(
+  "C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables"
+)
+paste("There are", length(paths), "different samples currently available.")
+
+data = purrr::map_df(paths, read_cell_seg_data, pixels_per_micron = getOption("phenoptr.pixels.per.micron"))
+# data_split_slideID = data %>%
+#   split(.$`Slide ID`)
+# data_split_SampleName = data %>%
+#   split(.$`Sample Name`)
+# hf = hyperframe(pathfile = paths, SlideID = data$`Slide ID`, SampleName = unique(data$`Sample Name`), dataSampleName = data_split_SampleName)
+# hf = hyperframe(pathfile = paths, dataSampleName = data_split_SampleName)
+
+paste("dimensions of the data is", dim(data)[1], "times", dim(data)[2]) # 1805834 197
+data_filtered = data %>% filter(Phenotype != "")
+paste("dimensions of the data is", dim(data_filtered)[1], "times", dim(data_filtered)[2]) # 1805653 197
+
+data_filtered_with_distance <- data_filtered %>%
+  do(bind_cols(., find_nearest_distance(.)))
+paste("dimensions of the data is", dim(data_filtered_with_distance)[1], "times", dim(data_filtered_with_distance)[2]) #1805653 217
+
+```
+
+```{r RUN preprocessing data and statistics, echo=FALSE}
+
+# preprocessing data and statistics
+
+# colors according to slides Marit and plot conventions
+pheno_vector_absolut = c("CD163+PDL1-","CD163+PDL1+","CD3+CD8-PD1-", "CD3+CD8-PD1+", "CD3+CD8+PD1-", "CD3+CD8+PD1+","Other","Other PDL1+","PAX5+PDL1-", "PAX5+PDL1+")
+
+colors_absolut = c("magenta", "brown", "red", "blue", "green", "yellow", "gray", "pink", "orange", "cyan")
+names(colors_absolut) = pheno_vector_absolut
+
+
+dim_n = length(pheno_vector_absolut)
+dim_m = 2*dim_n + 2
+statistics = as.data.frame(matrix(rep(0,dim_n*dim_m),dim_n, dim_m))
+colnames(statistics) = c(paste("Area K",pheno_vector_absolut),"Area Kdot", paste("Maxnorm K",pheno_vector_absolut), "Maxnorm Kdot")
+rownames(statistics) = pheno_vector_absolut
+```
+
+
+
+```{r RUN data for extreme cases: HO105-194}
+######### RUN data for extreme cases #########
+
+# run for one sample name
+# samplenames = unique(merged_filtered_with_distance$`Sample Name`)
+
+
+# data from Marit: extreme cases
+
+# HO105-194
+sample_name = "HO105-194_[16067,37856].im3" # PD-L1 positive cluster + Tumor cluster
+data_sample_name = data_filtered %>% filter(`Sample Name` == sample_name)
+data_sample_name = data_filtered_with_distance %>% filter(`Sample Name` == sample_name)
+output =  do_analyse(data_sample_name, NULL, NULL,NULL,c(TRUE,TRUE),XposCol = 'Cell X Position', YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', sample_name)
+
+sample_name = "HO105-194_[15564,37856].im3" # PD-L1 positive cluster + Tumor cluster
+#output =  do_analyse(merged_filtered_with_distance, statistics, sample_name, missing_list, plotter)
+
+sample_name = "HO105-194_[16029,38205].im3" # not clustered
+#output = do_analyse(merged_filtered_with_distance, statistics, sample_name, missing_list, plotter)
+```
+
+```{r RUN data for extreme cases: HO105-186}
+# HO105-186
+sample_name = "HO105-186_[18941,59427].im3" # PD-L1 positive cluster + Tumor cluster
+output = do_analyse(merged_filtered_with_distance, statistics, sample_name, missing_list, plotter)
+
+sample_name = "HO105-186_[18837,59867].im3" # PD-L1 positive cluster + Tumor cluster
+output = do_analyse(merged_filtered_with_distance, statistics, sample_name, missing_list, plotter)
+
+sample_name = "HO105-186_[18127,59130].im3" # PD-L1 positive cluster + Tumor cluster
+output = do_analyse(merged_filtered_with_distance, statistics, sample_name, missing_list, plotter)
+
+sample_name = "HO105-186_[14661,55645].im3" # PD-L1 positive cluster + Tumor cluster
+output = do_analyse(merged_filtered_with_distance, statistics, sample_name, missing_list, plotter)
+
+sample_name = "HO105-186_[14121,55575].im3" # PD-L1 positive cluster + Tumor cluster
+output = do_analyse(merged_filtered_with_distance, statistics, sample_name, missing_list, plotter)
+```
+
+```{r RUN data for extreme cases: HO105-101}
+# HO105-101
+sample_name = "HO105-101_[9072,46519].im3" # Spreadout Tumor
+output =do_analyse(merged_filtered_with_distance, statistics, sample_name, missing_list, plotter)
+```
+
+```{r RUN data for extreme cases: HO105-150}
+# HO105-150
+sample_name = "HO105-150_[13112,45808].im3" 
+output = do_analyse(merged_filtered_with_distance, statistics, sample_name, missing_list, plotter)
+```
+
+```{r RUN data for extreme cases: HO105-120}
+# HO105-120
+sample_name = "HO105-120_[5524,47985].im3" 
+output = do_analyse(merged_filtered_with_distance, statistics, sample_name, missing_list, plotter)
+```
+
+```{r RUN data for extreme cases: HO105-107}
+# HO105-107
+sample_name = "HO105-107_[11070,34907].im3" # T-cell cluster
+output = do_analyse(merged_filtered_with_distance, statistics, sample_name, missing_list, plotter)
+```
+
+```{r RUN data for extreme cases: HO105-171_3}
+# HO105-171_3
+sample_name = "HO105-171_3_[6297,46984].im3" # T-cell cluster surrounded by Other
+output = do_analyse(merged_filtered_with_distance, statistics, sample_name, missing_list, plotter)
+
+sample_name = "HO105-171_3_[12870,46254].im3" # T-cell cluster surrounded by Other
+output = do_analyse(merged_filtered_with_distance, statistics, sample_name, missing_list, plotter)
+```
+
+
+
+
+```{r RUN do analyse on all samples, echo = FALSE, eval = FALSE}
+# check for each image which pheotypes are missing for overview
+
+statistics_list = list()
+statistic_mean_list = list()
+all_types_options_list = list()
+missing_list = list()
+r_close_list = list()
+statistic_close_list = list()
+r_vec = c(10,20)
+
+histo_boxplot_plotter = FALSE
+statistic_plotter = FALSE
+
+plotter = c(histo_boxplot_plotter, statistic_plotter)
+print("real cases")
+
+for (sample_name in paths[1:1]){
+  output =  do_analyse(data_filtered_with_distance, pheno_vector_absolut, r_vec, pheno_vector, plotter)
+  
+  
+  
+  
+  
+
+  statistic_sample_name = output[1]
+  statistic_mean_sample_name = output[2]
+  all_types_options_sample_name = output[3]
+  r_close_sample_name = output[4]
+  statistic_close_sample_name = output[5]
+  not_in_sample_sample_name = output[6]
+  
+  # print("statistic_sample_name");print(statistic_sample_name)
+  print("all_types_options_sample_name"); print(all_types_options_sample_name)
+  print("r_close_sample_name"); print(r_close_sample_name)
+  print("statistic_close_sample_name"); print(statistic_close_sample_name)
+  
+  # statistics_list[[sample_name]] = statistic_sample_name
+  # statistic_mean_list[[sample_name]] = statistic_mean_sample_name
+  # all_types_options_list[[sample_name]] = all_types_options_sample_name # all_types_options_list$`HO105-003_[10769,37002].im3`[1][[1]][1]$G$$fns[[36]]
+  # r_close_list[[sample_name]] = r_close_sample_name
+  # statistic_close_list[[sample_name]] = statistic_close_sample_name
+  # missing_list[[sample_name]] = not_in_sample_sample_name
+  # 
+  # print(all_types_options_list)
+  # print(statistic_close_list)
+}
+
+
+```
+
+
+
+```{r RUN figures for thesis}
+# from https://stackoverflow.com/questions/57434048/how-to-save-ppp-planer-point-pattern-dataframe-or-a-hyperframe-created-from-di
+# saveRDS(OakMaple,file = "OakMaple.rds")
+# OakMaple = readRDS(file = "OakMaple.rds")
+
+# OakMaple
+OakMaple = rmpoispp(50,types = c("Oak", "Maple"))
+par(mfrow=c(1,1))
+plot(OakMaple, main=NULL, cols=c("blue","red"),pch=20)
+title("A Marked Point Process on the distrubtion of Oak and Maple trees", line = 0)
+
+# estimator_density
+OakMaple20 = rpoispp(20)
+Area20 = (OakMaple20$window$xrange[2]-OakMaple20$window$xrange[1])*(OakMaple20$window$yrange[2]-OakMaple20$window$yrange[1])
+lambda20 = OakMaple20$n / Area20
+
+OakMaple100 = rpoispp(100)
+Area100 = (OakMaple100$window$xrange[2]-OakMaple100$window$xrange[1])*(OakMaple100$window$yrange[2]-OakMaple100$window$yrange[1])
+lambda100 = OakMaple100$n / Area100
+
+par(mfrow=(c(1,2)))
+plot(OakMaple20, main = NULL, pch=20)
+title(paste("Poisson Process with intensity 20 and estimator", lambda20), line = 0)
+
+plot(OakMaple100, main = NULL,pch=20)
+title(paste("Poisson Process with intensity 100 and estimator", lambda100), line = 0)
+
+
+# estimators_density_splitted
+Oak_n = sum(OakMaple$marks =="Oak")
+Maple_n = sum(OakMaple$marks =="Maple")
+Area = (OakMaple$window$xrange[2]-OakMaple$window$xrange[1])*(OakMaple$window$yrange[2]-OakMaple$window$yrange[1])
+lambdaOak = Oak_n / Area
+lambdaMaple = Maple_n / Area
+
+par(mfrow=c(1,2))
+plot(OakMaple[OakMaple$marks == "Oak"],main=NULL,cols=c("blue","red"),pch=20)
+title(paste("The Point Process of the Oaks in Figure 1 and the density estimator", lambdaOak), line = 0)
+plot(OakMaple[OakMaple$marks == "Maple"],main=NULL,cols=c("blue","red"),pch=20)
+title(paste("The Point Process of the Maples  in Figure 1 and the density estimator", lambdaMaple), line = 0)
+
+#OakMaple_quadratcounts
+par(mfrow=c(1,3))
+plot(OakMaple, main=NULL, cols  = c("blue", "red"), pch = 20)
+plot(quadratcount(OakMaple), add=TRUE)
+title("The Marked Point Process and its quadratcounts", line=0)
+plot(OakMaple[OakMaple$marks == "Oak"], main = NULL,cols = c("blue", "red"), pch = 20)
+plot(quadratcount(OakMaple[OakMaple$marks == "Oak"]), add=TRUE)
+title("The Marked Point Process filtered on the Oaks and its quadratcounts", line=0)
+plot(OakMaple[OakMaple$marks == "Maple"], main=NULL, cols = c("blue", "red"), pch = 20)
+plot(quadratcount(OakMaple[OakMaple$marks == "Maple"]), add=TRUE)
+title("The Marked Point Process filtered on the Maples and its quadratcounts", line=0)
+
+# OakMaple_emptyspace
+par(mfrow = c(1,2))
+plot(OakMaple, main=NULL, cols=c("blue","red"),pch=20)
+title("A Marked Point Process on the distribution of Oak and Maple trees", line = 0)
+plot(Fest(OakMaple), main= NULL)
+title("The Empty Space function for the Marked Point Process", line = 0)
+# envelope(OakMaple,Fest)
+
+```
+
+
+
+
+
+
+
+
