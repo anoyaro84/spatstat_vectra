@@ -1,0 +1,6 @@
+install.packages('tidyverse')
+install.packages('devtools')
+install.packages('spatstat')
+install.packages('spdep')
+install.packages('zoo')
+devtools::install_github('akoyabio/phenoptr@9000')
