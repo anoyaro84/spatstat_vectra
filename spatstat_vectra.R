@@ -10,7 +10,7 @@ library(zoo)
 # why statistics was used as argument?
 do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL, plotter = c(FALSE,FALSE), 
                        XposCol = 'Cell X Position', YposCol = 'Cell Y Position',
-                       PhenoCol = 'Phenotype', sample_name = NULL, ...) {
+                       PhenoCol = 'Phenotype', sample_name = NULL, r_vec = NULL, ...) {
   csd <- Intable[, c(PhenoCol, XposCol, YposCol)]
   colnames(csd) = c('Phenotype', 'Cell X Position',  'Cell Y Position')
   pheno_vector = unique(csd$Phenotype)
@@ -31,12 +31,15 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
       csd$Phenotype[[pheno]] = phenotype[[pheno]]
     }
   }
+  
   # Replace "+" with "T" and "-" with "F" in the vector and csd
   pheno_vector = str_replace_all(pheno_vector,"[+]","T")
   pheno_vector = str_replace_all(pheno_vector,"[-]","F")
   
+  
   csd$Phenotype = str_replace_all(csd$Phenotype,"[+]","T")
   csd$Phenotype = str_replace_all(csd$Phenotype,"[-]","F")
+  
   
   n=length(pheno_vector)  
   #sample_name = str_replace(sample_name,".im3","")
@@ -56,10 +59,14 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
                  main = paste("Coordinates of cells and their phenotype in sample", sample_name), pch = 20)
   }
   
+  if (is.null(r_vec)){
+    dim_scale = min(max(csd[[XposCol]],max(csd[[YposCol]])))
+    r_vec = dim_scale*c(0.1,0.9)
     
-  distances = pairdist(csd_ppp)
+  }
   
   
+  stop("yes")
   # define all inbuild statistics
   options = c("G","F", "J","Gdot", "Jdot", "K", "L", "pcf", "Kdot", "Ldot")
   # options = c("pcf", "G", "Jcross", "Kcross", "Lcross", "Gdot", "Jdot", "Kdot", "Ldot")
@@ -74,7 +81,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
   rownames(statistics) = PhenoOrder
   
   values_options = list()
-  r_vec = 10
+  
   all_types_options_sample_name = list()
   
   for (option in options){
@@ -97,26 +104,35 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
 }
 
 
-# function for retreiving the Median Absolute Deviation distance for each phenotype
-getMAD <- function(data, pheno_vector){
+# function for retreiving the Median Absolute Deviation distance for each phenotype, and the Median Absolute Deviation for each phenotype to the closest other phenotype
+getMAD <- function(data, pairwise_distances, pheno_vector){
   MED = matrix(NA , nrow = length(pheno_vector), ncol = length(pheno_vector))
   colnames(MED) = pheno_vector
   rownames(MED) = pheno_vector
-
-  MAD = matrix(NA , nrow = length(pheno_vector), ncol = length(pheno_vector))
-  colnames(MAD) = pheno_vector
-  rownames(MAD) = pheno_vector
+  
+  MAD = MED
+  MED_min = MED
+  MAD_min = MED
   
   for (from in pheno_vector){
-    data1 = data %>% filter(`Phenotype` == from)
-    
+    filter_from = data %>% filter(`Phenotype` == from)
+    IDs_from = filter_from$`Cell ID`
     for (to in pheno_vector){
-      distances = data1[[paste("Distance to",to)]]
+      distances_min = filter_from[[paste("Distance to",to)]]
+      MED_min[paste(from), paste(to)] = median(distances_min)
+      MAD_min[paste(from), paste(to)] = mad(distances_min)
       
-      MED[paste(from), paste(to)] = median(distances)
-      MAD[paste(from), paste(to)] = mad(distances)
+      filter_to = data %>% filter(`Phenotype` == to)
+      IDs_to = filter_to$`Cell ID`
+      pairwise_to_from = pairwise_distances[IDs_from,IDs_to]
+      view(pairwise_to_from)
+      MED[paste(from), paste(to)] = median(pairwise_to_from)
+      MAD[paste(from), paste(to)] = mad(pairwise_to_from)      
+      stop()
+
     }
   }
+  
   paste("MED", MED)
   paste("MAD", MAD)
   return(c(MED, MAD))
