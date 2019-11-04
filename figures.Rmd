@@ -1,0 +1,98 @@
+---
+title: "figures generation for thesis"
+author: "Erik Bosch"
+date: "11/4/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r source, echo=FALSE}
+source("spatstat_vectra.R")
+```
+
+
+```{r RUN OakMaple50}
+# from https://stackoverflow.com/questions/57434048/how-to-save-ppp-planer-point-pattern-dataframe-or-a-hyperframe-created-from-di
+# saveRDS(OakMaple,file = "OakMaple.rds")
+# OakMaple = readRDS(file = "OakMaple.rds")
+
+# OakMaple
+set.seed(123456789)
+OakMaple = rmpoispp(50,types = c("Oak", "Maple"))
+par(mfrow=c(1,1))
+plot(OakMaple, main=NULL, cols=c("blue","red"),pch=20)
+title("Location of Oak and Maple trees in a square property", line = 0)
+
+```
+
+```{r OakMaple20/100}
+# estimator_density
+set.seed(123456789)
+OakMaple20 = rpoispp(20)
+Area20 = (OakMaple20$window$xrange[2]-OakMaple20$window$xrange[1])*(OakMaple20$window$yrange[2]-OakMaple20$window$yrange[1])
+lambda20 = OakMaple20$n / Area20
+
+OakMaple100 = rpoispp(100)
+Area100 = (OakMaple100$window$xrange[2]-OakMaple100$window$xrange[1])*(OakMaple100$window$yrange[2]-OakMaple100$window$yrange[1])
+lambda100 = OakMaple100$n / Area100
+
+par(mfrow=(c(1,2)))
+plot(OakMaple20, main = NULL, pch=20)
+title(paste("Poisson Process with intensity 20 and estimator", lambda20), line = 0)
+
+plot(OakMaple100, main = NULL,pch=20)
+title(paste("Poisson Process with intensity 100 and estimator", lambda100), line = 0)
+```
+
+```{r RUN estimators density splitted}
+# estimators_density_splitted
+set.seed(123456789)
+
+Oak_n = sum(OakMaple$marks =="Oak")
+Maple_n = sum(OakMaple$marks =="Maple")
+Area = (OakMaple$window$xrange[2]-OakMaple$window$xrange[1])*(OakMaple$window$yrange[2]-OakMaple$window$yrange[1])
+lambdaOak = Oak_n / Area
+lambdaMaple = Maple_n / Area
+
+
+OakMaple = rmpoispp(50,types = c("Oak", "Maple"))
+layout(matrix(c(1,1,2,3), 2, 2, byrow = TRUE))
+plot(OakMaple, main=NULL, cols=c("blue","red"),pch=20)
+plot(OakMaple[OakMaple$marks == "Oak"],main=NULL,cols=c("blue","red"),pch=20)
+#title(paste("The Point Process of the Oaks in Figure 1 and the density estimator", lambdaOak), line = 0)
+plot(OakMaple[OakMaple$marks == "Maple"],main=NULL,cols=c("blue","red"),pch=20)
+#title(paste("The Point Process of the Maples  in Figure 1 and the density estimator", lambdaMaple), line = 0)
+```
+
+```{r RUN quadratcounts}
+#OakMaple_quadratcounts
+set.seed(123456789)
+
+layout(matrix(c(1,1,2,3), 2, 2, byrow = TRUE))
+
+plot(OakMaple, main=NULL, cols  = c("blue", "red"), pch = 20)
+plot(quadratcount(OakMaple), add=TRUE)
+title("The Marked Point Process and its quadratcounts", line=0)
+plot(OakMaple[OakMaple$marks == "Oak"], main = NULL,cols = c("blue", "red"), pch = 20)
+plot(quadratcount(OakMaple[OakMaple$marks == "Oak"]), add=TRUE)
+title("The Marked Point Process filtered on the Oaks and its quadratcounts", line=0)
+plot(OakMaple[OakMaple$marks == "Maple"], main=NULL, cols = c("blue", "red"), pch = 20)
+plot(quadratcount(OakMaple[OakMaple$marks == "Maple"]), add=TRUE)
+title("The Marked Point Process filtered on the Maples and its quadratcounts", line=0)
+```
+
+```{r RUN emptyspace}
+# OakMaple_emptyspace
+set.seed(123456789)
+
+par(mfrow = c(1,2))
+plot(OakMaple, main=NULL, cols=c("blue","red"),pch=20)
+title("A Marked Point Process on the distribution of Oak and Maple trees", line = 0)
+plot(Fest(OakMaple), main= NULL)
+title("The Empty Space function for the Marked Point Process", line = 0)
+plot(envelope(OakMaple,Fest))
+
+```
