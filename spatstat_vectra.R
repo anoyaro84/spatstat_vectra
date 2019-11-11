@@ -11,10 +11,11 @@ library(zoo)
 do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL, plotter = c(FALSE,FALSE), 
                        XposCol = 'Cell X Position', YposCol = 'Cell Y Position',
                        PhenoCol = 'Phenotype', sample_name = NULL, r_vec = NULL, ...) {
+  
   csd <- Intable[, c(PhenoCol, XposCol, YposCol)]
   colnames(csd) = c('Phenotype', 'Cell X Position',  'Cell Y Position')
   pheno_vector = unique(csd$Phenotype)
-
+  print(pheno_vector)
   if (is.null(sample_name)) {
 	  sample_name = 'Input sample'
   }
@@ -23,7 +24,12 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
     PhenoOrder = pheno_vector # if no order is set, just take the order from data
   }
   
+  if (is.element("",pheno_vector)){
+    pheno_vector = pheno_vector[pheno_vector != ""]
+  }
   pheno_vector = pheno_vector[order(match(pheno_vector,PhenoOrder))]
+  
+  print(pheno_vector)
   
   # Replace phenotype label by definition
   if (!is.null(phenotype)) {
@@ -32,7 +38,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
     }
   }
   
-  # Replace "+" with "T" and "-" with "F" in the vector and csd
+  # Replace "+" with "T" and "-" with "F" in phenotype vector and in the csd
   pheno_vector = str_replace_all(pheno_vector,"[+]","T")
   pheno_vector = str_replace_all(pheno_vector,"[-]","F")
   
@@ -40,8 +46,14 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
   csd$Phenotype = str_replace_all(csd$Phenotype,"[+]","T")
   csd$Phenotype = str_replace_all(csd$Phenotype,"[-]","F")
   
+  print(pheno_vector)
   
-  n=length(pheno_vector)  
+  # generate pairwise distance matrix for csd
+  pairwise_distances = distance_matrix(csd)
+  #pairwise_distances = distance_matrix(data)
+  
+  
+  n = length(pheno_vector)  
   #sample_name = str_replace(sample_name,".im3","")
   
   
@@ -60,16 +72,18 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
   }
   
   if (is.null(r_vec)){
-    dim_scale = min(max(csd[[XposCol]],max(csd[[YposCol]])))
+    dim_scale = min(max(csd[[XposCol]], max(csd[[YposCol]])))
     r_vec = dim_scale*c(0.1,0.9)
+    # r_vec currently does not work well when given NULL due to several automated settings for the grid of r in the settings of each option
+    # ASSUMPTION
     
   }
+  print(r_vec)
   
   
-  stop("yes")
+  
   # define all inbuild statistics
   options = c("G","F", "J","Gdot", "Jdot", "K", "L", "pcf", "Kdot", "Ldot")
-  # options = c("pcf", "G", "Jcross", "Kcross", "Lcross", "Gdot", "Jdot", "Kdot", "Ldot")
   
   
   dim_n = length(PhenoOrder)
@@ -92,12 +106,12 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
     if (plotter[2] == TRUE){
       plot(all_types)
     }
-    
+    print(option)
     output = interpolate_r(all_types, r_vec, option)
     
     # r_close_list = output[1]
     # statistic_close_list = output[2]
-    # 
+    stop("round 1")
   }
   
   return(c(distances, output))
@@ -106,6 +120,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
 
 # function for retreiving the Median Absolute Deviation distance for each phenotype, and the Median Absolute Deviation for each phenotype to the closest other phenotype
 getMAD <- function(data, pairwise_distances, pheno_vector){
+  
   MED = matrix(NA , nrow = length(pheno_vector), ncol = length(pheno_vector))
   colnames(MED) = pheno_vector
   rownames(MED) = pheno_vector
@@ -114,28 +129,28 @@ getMAD <- function(data, pairwise_distances, pheno_vector){
   MED_min = MED
   MAD_min = MED
   
+  #data_with_distance = data %>% do(bind_cols(., find_nearest_distance(.)))
+  
   for (from in pheno_vector){
-    filter_from = data %>% filter(`Phenotype` == from)
+    filter_from = data_with_distance %>% filter(`Phenotype` == from & `Phenotype` != "")
     IDs_from = filter_from$`Cell ID`
+
     for (to in pheno_vector){
       distances_min = filter_from[[paste("Distance to",to)]]
       MED_min[paste(from), paste(to)] = median(distances_min)
       MAD_min[paste(from), paste(to)] = mad(distances_min)
       
-      filter_to = data %>% filter(`Phenotype` == to)
+      filter_to = data %>% filter(`Phenotype` == to & `Phenotype` != "")
       IDs_to = filter_to$`Cell ID`
+      
       pairwise_to_from = pairwise_distances[IDs_from,IDs_to]
-      view(pairwise_to_from)
+      
       MED[paste(from), paste(to)] = median(pairwise_to_from)
-      MAD[paste(from), paste(to)] = mad(pairwise_to_from)      
-      stop()
-
+      MAD[paste(from), paste(to)] = mad(pairwise_to_from)
     }
   }
-  
-  paste("MED", MED)
-  paste("MAD", MAD)
-  return(c(MED, MAD))
+
+  return(c(MED_min, MED, MAD_min, MAD ))
 }
 
 # function for receiving the counts of the phenotypes in the sample and their density
@@ -166,12 +181,22 @@ interpolate_r <- function(all_types, r_vec, option){
     for (range in (1:length(all_types$fns))){
       # print("inside loops, test r_emperic")
       # print(all_types_options[[option]][["fns"]][[range]][["r"]])
-      
+      if (range == 3){
+        stop("should be done range =3")
+      }
       
       
       
       r_emperic = all_types[["fns"]][[range]][["r"]]
-      
+      if (range == 1){
+        print(option)
+        print(r_emperic)
+        print(all_types[["fns"]])
+        print(all_types[["fns"]][[range]])
+        print(all_types[["fns"]][[range]][["r"]])
+        print(all_types[["fns"]][[range]][["rs"]])
+      }
+      stop("after print")
       dif = r_emperic - r_i
       dif_abs = abs(dif)
       condition = match(min(dif_abs),dif_abs)
