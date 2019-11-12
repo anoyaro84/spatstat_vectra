@@ -15,7 +15,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
   csd <- Intable[, c(PhenoCol, XposCol, YposCol)]
   colnames(csd) = c('Phenotype', 'Cell X Position',  'Cell Y Position')
   pheno_vector = unique(csd$Phenotype)
-  print(pheno_vector)
+  # print(pheno_vector)
   if (is.null(sample_name)) {
 	  sample_name = 'Input sample'
   }
@@ -29,7 +29,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
   }
   pheno_vector = pheno_vector[order(match(pheno_vector,PhenoOrder))]
   
-  print(pheno_vector)
+  # print(pheno_vector)
   
   # Replace phenotype label by definition
   if (!is.null(phenotype)) {
@@ -38,7 +38,44 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
     }
   }
   
-  # Replace "+" with "T" and "-" with "F" in phenotype vector and in the csd
+  if (is.null(r_vec)){
+    dim_scale = min(max(csd[[XposCol]], max(csd[[YposCol]])))
+    r_vec = dim_scale*c(0.1,0.9)
+    # r_vec currently does not work well when given NULL due to several automated settings for the grid of r in the settings of each option
+    # ASSUMPTION
+    
+  }
+  
+  print(paste("r_vec is", r_vec))
+  
+  # generate pairwise distance matrix for csd
+  pairwise_distances = distance_matrix(Intable)
+  
+  # normal statistics: MAD and MED
+  
+  output = getMAD(Intable, pairwise_distances, pheno_vector)
+  MED_min = output[1]
+  MED = output[2]
+  MAD_min = output[3]
+  MAD = output[4]
+  
+  # normal statistics: Counts and Density
+  Area_sample = max(csd[[XposCol]])*max(csd[[YposCol]])
+  output = getDensity(csd, pheno_vector, Area_sample)
+
+  counts_sample = output[1]
+  density_sample = output[2]
+  
+  # normal statistics: Area and maxnorm
+  dim_n = length(PhenoOrder)
+  dim_m = 2*dim_n + 2
+  
+  statistics = as.data.frame(matrix(rep(0,dim_n*dim_m),dim_n, dim_m))
+  colnames(statistics) = c(paste("Area K", PhenoOrder),"Area Kdot", paste("Maxnorm K", PhenoOrder), "Maxnorm Kdot")
+  rownames(statistics) = PhenoOrder
+  
+  
+  # Replace "+" with "T" and "-" with "F" in phenotype vector and in the csd for correct functioning of extracting inbuild statistics.
   pheno_vector = str_replace_all(pheno_vector,"[+]","T")
   pheno_vector = str_replace_all(pheno_vector,"[-]","F")
   
@@ -46,21 +83,9 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
   csd$Phenotype = str_replace_all(csd$Phenotype,"[+]","T")
   csd$Phenotype = str_replace_all(csd$Phenotype,"[-]","F")
   
-  print(pheno_vector)
-  
-  # generate pairwise distance matrix for csd
-  pairwise_distances = distance_matrix(csd)
-  #pairwise_distances = distance_matrix(data)
-  
-  
   n = length(pheno_vector)  
   #sample_name = str_replace(sample_name,".im3","")
   
-  
-  # filter first two columns out to convert to ppp as column 1 and 2 are assumed respectively X and Y coordinates and move them in front
-  #csd = csd[ ,c(5,6,4,1,2,3,c(7:ncol(csd)))]
-  # names(csd[,1:6])
-  # [1] "Cell X Position" "Cell Y Position" "Cell ID"         "Path"            "Sample Name"     "Phenotype" 
   
   csd_ppp = ppp(x=csd[[XposCol]], y=csd[[YposCol]],
                 window = owin(c(0, max(csd[[XposCol]])),
@@ -71,28 +96,10 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
                  main = paste("Coordinates of cells and their phenotype in sample", sample_name), pch = 20)
   }
   
-  if (is.null(r_vec)){
-    dim_scale = min(max(csd[[XposCol]], max(csd[[YposCol]])))
-    r_vec = dim_scale*c(0.1,0.9)
-    # r_vec currently does not work well when given NULL due to several automated settings for the grid of r in the settings of each option
-    # ASSUMPTION
-    
-  }
-  print(r_vec)
-  
-  
-  
+
   # define all inbuild statistics
   options = c("G","F", "J","Gdot", "Jdot", "K", "L", "pcf", "Kdot", "Ldot")
-  
-  
-  dim_n = length(PhenoOrder)
-  dim_m = 2*dim_n + 2
-  
-  
-  statistics = as.data.frame(matrix(rep(0,dim_n*dim_m),dim_n, dim_m))
-  colnames(statistics) = c(paste("Area K", PhenoOrder),"Area Kdot", paste("Maxnorm K", PhenoOrder), "Maxnorm Kdot")
-  rownames(statistics) = PhenoOrder
+
   
   values_options = list()
   
@@ -101,7 +108,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
   for (option in options){
     # print(option)
     all_types = alltypes(csd_ppp,fun = paste(option), dataname = sample_name, envelope = FALSE)
-    # print(length(all_types$fns))    
+    # print(all_types$fns)    
     all_types_options_sample_name[[option]] = all_types
     if (plotter[2] == TRUE){
       plot(all_types)
@@ -119,7 +126,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
 
 
 # function for retreiving the Median Absolute Deviation distance for each phenotype, and the Median Absolute Deviation for each phenotype to the closest other phenotype
-getMAD <- function(data, pairwise_distances, pheno_vector){
+getMAD <- function(data_with_distance, pairwise_distances, pheno_vector){
   
   MED = matrix(NA , nrow = length(pheno_vector), ncol = length(pheno_vector))
   colnames(MED) = pheno_vector
@@ -129,14 +136,13 @@ getMAD <- function(data, pairwise_distances, pheno_vector){
   MED_min = MED
   MAD_min = MED
   
-  #data_with_distance = data %>% do(bind_cols(., find_nearest_distance(.)))
-  
   for (from in pheno_vector){
     filter_from = data_with_distance %>% filter(`Phenotype` == from & `Phenotype` != "")
     IDs_from = filter_from$`Cell ID`
 
     for (to in pheno_vector){
       distances_min = filter_from[[paste("Distance to",to)]]
+
       MED_min[paste(from), paste(to)] = median(distances_min)
       MAD_min[paste(from), paste(to)] = mad(distances_min)
       
@@ -149,20 +155,19 @@ getMAD <- function(data, pairwise_distances, pheno_vector){
       MAD[paste(from), paste(to)] = mad(pairwise_to_from)
     }
   }
-
   return(c(MED_min, MED, MAD_min, MAD ))
 }
 
 # function for receiving the counts of the phenotypes in the sample and their density
-getDensity <- function(data, pheno_vector,phenoOrder, Area_sample){
-  counts_sample = rep(0,length(phenoOrder))
-  names(counts_sample) = phenoOrder
+getDensity <- function(data, pheno_vector, Area_sample){
+  counts_sample = rep(0,length(pheno_vector))
+  names(counts_sample) = pheno_vector
   
-  density_sample = rep(0,length(phenoOrder))
-  names(density_sample) = phenoOrder
+  density_sample = rep(0,length(pheno_vector))
+  names(density_sample) = pheno_vector
   
   for (i in pheno_vector){
-    n = dim(data %>% filter(`Phenotype` == i))[1]
+    n = dim(data %>% filter(`Phenotype` == i & `Phenotype` != ""))[1]
     counts_sample[[i]] = n
     density_sample[[i]] = n / Area_sample
   }
@@ -174,51 +179,20 @@ getDensity <- function(data, pheno_vector,phenoOrder, Area_sample){
 interpolate_r <- function(all_types, r_vec, option){
   r_close_list = list()
   statistic_close_list = list()
+
   for (r_i in r_vec){
     r_close_list[[option]][[paste("radius", r_i)]] = list()
     statistic_close_list[[option]][[paste("radius", r_i)]] = list()
     
     for (range in (1:length(all_types$fns))){
-      # print("inside loops, test r_emperic")
-      # print(all_types_options[[option]][["fns"]][[range]][["r"]])
-      if (range == 3){
-        stop("should be done range =3")
-      }
-      
-      
-      
-      r_emperic = all_types[["fns"]][[range]][["r"]]
-      if (range == 1){
-        print(option)
-        print(r_emperic)
-        print(all_types[["fns"]])
-        print(all_types[["fns"]][[range]])
-        print(all_types[["fns"]][[range]][["r"]])
-        print(all_types[["fns"]][[range]][["rs"]])
-      }
-      stop("after print")
-      dif = r_emperic - r_i
-      dif_abs = abs(dif)
-      condition = match(min(dif_abs),dif_abs)
-      if (dif[condition]>0){
-        left = condition -1
-        right = condition
-      }else{
-        left = condition
-        right = condition +1
-      }
-      
-      r1 = r_emperic[left]
-      r2 = r_emperic[right]
-      print(c(r1,r2))
-      
-      
       r_close_list[[option]][[paste("radius", r_i)]][[paste(option, "fns which",range)]] = r_i
       
       
       if ((option == "K")|| (option == "L") || (option == "Kdot")|| (option == "Ldot")){
+        
         stat1 = all_types[["fns"]][[range]][["border"]][left]
         stat2 = all_types[["fns"]][[range]][["border"]][right]
+        print(c(stat1,stat2))
         
         a = (stat2-stat1)/(r2-r1) # y=ax+b
         b = stat2 - a*r2
@@ -227,6 +201,7 @@ interpolate_r <- function(all_types, r_vec, option){
       } else if (option == "pcf"){
         stat1 = all_types[["fns"]][[range]][["trans"]][left]
         stat2 = all_types[["fns"]][[range]][["trans"]][right]
+        print(c(stat1,stat2))
         
         a = (stat2-stat1)/(r2-r1)
         b = stat2 - a*r2
@@ -234,13 +209,49 @@ interpolate_r <- function(all_types, r_vec, option){
         
         statistic_close_list[[option]][[paste("radius", r_i)]][[option]][[paste(option, "fns which",range)]] = stat
       } else{
-        stat1 = all_types[["fns"]][[range]][["rs"]][left]
-        stat2 = all_types[["fns"]][[range]][["rs"]][right]
+        
+        view(all_types[["fns"]][[range]])
+        r_emperic = all_types[["fns"]][[range]][["r"]]
+
+        stat_emperic = all_types[["fns"]][[range]][["theohaz"]] #ASSUMPTION temporarily
+
+        
+        if (max(r_emperic)< r_i){
+          warning("default r interval is to small")
+          next(paste("skip", range, option))
+        }
+        
+        dif = r_emperic - r_i
+        dif_abs = abs(dif)
+        condition = match(min(dif_abs),dif_abs)
+        
+        if (dif[condition]>0){
+          left = condition - 1
+          right = condition
+        }else{
+          left = condition
+          right = condition + 1
+        }
+        
+        r1 = r_emperic[left]
+        r2 = r_emperic[right]
+        
+        print(c(r1,r2))
+        stat1 = all_types[["fns"]][[range]][["theohaz"]][left]
+        stat2 = all_types[["fns"]][[range]][["theohaz"]][right]
+        
+        # stat1 = all_types[["fns"]][[range]][["rs"]][left]
+        # stat2 = all_types[["fns"]][[range]][["rs"]][right]
+        print(c(stat1,stat2))
         
         a = (stat2-stat1)/(r2-r1)
         b = stat2 - a*r2
         stat = a*(r_i-r2)+stat2
         statistic_close_list[[option]][[paste("radius", r_i)]][[option]][[paste(option, "fns which",range)]] = stat
+        
+        print(paste("r left of r_i is", r1, ",r_i is", r_i, ",right of r_i is", r2))
+        print(paste("stat left of r_i is", stat1, ",stat is", stat, ",right of stat is", stat2))
+        stop("end")
       }
     }
   }
