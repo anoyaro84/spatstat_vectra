@@ -96,7 +96,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
                  main = paste("Coordinates of cells and their phenotype in sample", sample_name), pch = 20)
   }
   
-
+  
   # define all inbuild statistics
   options = c("G","F", "J","Gdot", "Jdot", "K", "L", "pcf", "Kdot", "Ldot")
   # G and F are alreay in J.
@@ -107,10 +107,13 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
  
   r_close_list = list()
   statistic_close_list = list()
+  
+  
+  
   for (option in options){
-    # print(option)
+    
     all_types = alltypes(csd_ppp,fun = paste(option), dataname = sample_name, envelope = FALSE)
-    # print(all_types$fns)
+    
     all_types_options_sample_name[[option]] = all_types
     if (plotter[2] == TRUE){
       plot(all_types)
@@ -122,9 +125,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
     statistic_close_list[[option]] = output[[2]]
     
   }
- 
-  browser()
-  return(list(pairwise_distances, counts_sample, density_sample, MED_min, MED, MAD_min, MAD, r_close_list, statistic_close_list))
+  return(list(pairwise_distances, counts_sample, density_sample, MED_min, MED, MAD_min, MAD, r_close_list, statistic_close_list, all_types_options_sample_name))
 }
 
 
@@ -180,17 +181,18 @@ getDensity <- function(data, pheno_vector, Area_sample){
 
 # function interpolate statistic for given r
 interpolate_r <- function(all_types, r_vec, option){
+  
   r_close_list = list()
   statistic_close_list = list()
-
+  
   for (r_i in r_vec){
-    print(r_i)
-    r_close_list[[option]][[paste("radius", r_i)]] = list()
-    statistic_close_list[[option]][[paste("radius", r_i)]] = list()
-    print(length(all_types$fns))
+    
+    r_close_list[[paste("radius", r_i)]] = list()
+    statistic_close_list[[paste("radius", r_i)]] = list()
+    # print(length(all_types$fns))
     for (range in (1:length(all_types$fns))){
       
-      r_close_list[[option]][[paste("radius", r_i)]][[paste(option, "fns which",range)]] = r_i
+      r_close_list[[paste("radius", r_i)]][[paste(option, "fns which",range)]] = r_i
       
       r_emperic = all_types[["fns"]][[range]][["r"]]
       dif = r_emperic - r_i
@@ -207,9 +209,7 @@ interpolate_r <- function(all_types, r_vec, option){
 
       r1 = r_emperic[left]
       r2 = r_emperic[right]
-      if(range == length(all_types$fns)){
- #       browser()
-      }
+
       if ((option == "K")|| (option == "L") || (option == "Kdot")|| (option == "Ldot") || (option == "pcf")){
         
         if (max(r_emperic)< r_i){
@@ -224,15 +224,11 @@ interpolate_r <- function(all_types, r_vec, option){
         b = stat2 - a*r2
         stat = a*(r_i-r2)+stat2
         
-        statistic_close_list[[option]][[paste("radius", r_i)]][[option]][[paste(option, "fns which",range)]] = stat
+        statistic_close_list[[paste("radius", r_i)]][[paste(option, "fns which",range)]] = stat
         
-        print(paste("r left of r_i is", r1, ",r_i is", r_i, ",right of r_i is", r2))
-        print(paste("stat left of r_i is", stat1, ",stat is", stat, ",right of stat is", stat2))
-        
-        if(range == length(all_types$fns)){
-#          browser()
-        }
-        # browser(text = "KdotLdotpcf")
+        # print(paste("r left of r_i is", r1, ",r_i is", r_i, ",right of r_i is", r2))
+        # print(paste("stat left of r_i is", stat1, ",stat is", stat, ",right of stat is", stat2))
+
         
       } else{
         
@@ -242,7 +238,7 @@ interpolate_r <- function(all_types, r_vec, option){
         }
         
         stat_emperic = all_types[["fns"]][[range]][["km"]] #ASSUMPTION temporarily
-        # view(all_types[["fns"]][[range]])
+
         stat1 = all_types[["fns"]][[range]][["km"]][left]
         stat2 = all_types[["fns"]][[range]][["km"]][right]
         
@@ -250,14 +246,11 @@ interpolate_r <- function(all_types, r_vec, option){
         b = stat2 - a*r2
         stat = a*(r_i-r2)+stat2
         
-        statistic_close_list[[option]][[paste("radius", r_i)]][[option]][[paste(option, "fns which",range)]] = stat
-
-        print(paste("r left of r_i is", r1, ",r_i is", r_i, ",right of r_i is", r2))
-        print(paste("stat left of r_i is", stat1, ",stat is", stat, ",right of stat is", stat2))
+        statistic_close_list[[paste("radius", r_i)]][[paste(option, "fns which",range)]] = stat
         
-        if(range == length(all_types$fns)){
-#          browser()
-        }
+        # print(paste("r left of r_i is", r1, ",r_i is", r_i, ",right of r_i is", r2))
+        # print(paste("stat left of r_i is", stat1, ",stat is", stat, ",right of stat is", stat2))
+        
       }
     }
   }
