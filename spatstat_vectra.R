@@ -54,17 +54,17 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
   # normal statistics: MAD and MED
   
   output = getMAD(Intable, pairwise_distances, pheno_vector)
-  MED_min = output[1]
-  MED = output[2]
-  MAD_min = output[3]
-  MAD = output[4]
+  MED_min = output[[1]]
+  MED = output[[2]]
+  MAD_min = output[[3]]
+  MAD = output[[4]]
   
   # normal statistics: Counts and Density
   Area_sample = max(csd[[XposCol]])*max(csd[[YposCol]])
   output = getDensity(csd, pheno_vector, Area_sample)
 
-  counts_sample = output[1]
-  density_sample = output[2]
+  counts_sample = output[[1]]
+  density_sample = output[[2]]
   
   # normal statistics: Area and maxnorm
   dim_n = length(PhenoOrder)
@@ -104,7 +104,9 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
   values_options = list()
   
   all_types_options_sample_name = list()
-  
+ 
+  r_close_list = list()
+  statistic_close_list = list()
   for (option in options){
     # print(option)
     all_types = alltypes(csd_ppp,fun = paste(option), dataname = sample_name, envelope = FALSE)
@@ -116,12 +118,13 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
     
     output = interpolate_r(all_types, r_vec, option)
     
-    r_close_list = output[1]
-    statistic_close_list = output[2]
+    r_close_list[[option]] = output[[1]]
+    statistic_close_list[[option]] = output[[2]]
     
   }
-  
-  return(c(pairwise_distances, counts_sample, density_sample, MED_min, MED, MAD_min, MAD, r_close_list, statistic_close_list))
+ 
+  browser()
+  return(list(pairwise_distances, counts_sample, density_sample, MED_min, MED, MAD_min, MAD, r_close_list, statistic_close_list))
 }
 
 
@@ -155,7 +158,7 @@ getMAD <- function(data_with_distance, pairwise_distances, pheno_vector){
       MAD[paste(from), paste(to)] = mad(pairwise_to_from)
     }
   }
-  return(c(MED_min, MED, MAD_min, MAD ))
+  return(list(MED_min, MED, MAD_min, MAD))
 }
 
 # function for receiving the counts of the phenotypes in the sample and their density
@@ -172,7 +175,7 @@ getDensity <- function(data, pheno_vector, Area_sample){
     density_sample[[i]] = n / Area_sample
   }
   
-  return(c(counts_sample, density_sample))
+  return(list(counts_sample, density_sample))
 }
 
 # function interpolate statistic for given r
@@ -205,7 +208,7 @@ interpolate_r <- function(all_types, r_vec, option){
       r1 = r_emperic[left]
       r2 = r_emperic[right]
       if(range == length(all_types$fns)){
-        browser()
+ #       browser()
       }
       if ((option == "K")|| (option == "L") || (option == "Kdot")|| (option == "Ldot") || (option == "pcf")){
         
@@ -227,7 +230,7 @@ interpolate_r <- function(all_types, r_vec, option){
         print(paste("stat left of r_i is", stat1, ",stat is", stat, ",right of stat is", stat2))
         
         if(range == length(all_types$fns)){
-          browser()
+#          browser()
         }
         # browser(text = "KdotLdotpcf")
         
@@ -253,12 +256,12 @@ interpolate_r <- function(all_types, r_vec, option){
         print(paste("stat left of r_i is", stat1, ",stat is", stat, ",right of stat is", stat2))
         
         if(range == length(all_types$fns)){
-          browser()
+#          browser()
         }
       }
     }
   }
-  return(c(r_close_list, statistic_close_list))
+  return(list(r_close_list, statistic_close_list))
 }
 
 
@@ -318,7 +321,7 @@ calculate_mean <- function(csd, pheno_vector, pheno_vector_absoluut, plotter){
       statistic_mean_sample_name[i,"Mean shortest distance to CD163+PDL1-"] = mean(dummy$`Distance to CD163+PDL1-`)
       
       if (plotter[1] == TRUE){
-        hist(csd$`Distance to CD163+PDL1-`[csd$Phenotype == i],
+        hist(csd$`Distance to CD164+PDL1-`[csd$Phenotype == i],
              main = paste(i,"to CD163+PDL1-"), ylab = "distance to CD163+PDL1-")
         boxplot(csd$`Distance to CD163+PDL1-`[csd$Phenotype == i],
                 main = paste(i,"to CD163+PDL1-"), ylab = "distance to CD163+PDL1-")
