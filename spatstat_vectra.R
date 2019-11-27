@@ -146,7 +146,7 @@ getMAD <- function(data_with_distance, pairwise_distances, pheno_vector){
 
     for (to in pheno_vector){
       distances_min = filter_from[[paste("Distance to",to)]]
-
+      
       MED_min[paste(from), paste(to)] = median(distances_min)
       MAD_min[paste(from), paste(to)] = mad(distances_min)
       

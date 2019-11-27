@@ -60,7 +60,7 @@ paths <- list_cell_seg_files(
 )
 paste("There are", length(paths), "different samples currently available.")
 
-
+samples_output = list()
 
 statistics_list = list()
 statistic_mean_list = list()
@@ -96,6 +96,8 @@ for (samplename in paths[1:1]){
   
   output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec)
   
+  samples_output[[samplename]] = output
+  
   
   pairwise_distances = output[[1]]
   counts_sample = output[[2]]
@@ -122,88 +124,365 @@ for (samplename in paths[1:1]){
 ```{r RUN data for extreme cases: HO105-194}
 ######### RUN data for extreme cases #########
 
-# run for one sample name
-# samplenames = unique(merged_filtered_with_distance$`Sample Name`)
+source("spatstat_vectra.R")
 
+
+statistics_list = list()
+statistic_mean_list = list()
+all_types_options_list = list()
+missing_list = list()
+r_close_list = list()
+statistic_close_list = list()
+r_vec = c(10,20)
+
+# run for one sample name
+
+samples_output = list()
 
 # data from Marit: extreme cases
 
 # HO105-194
-sample_name = "HO105-194_[16067,37856].im3" # PD-L1 positive cluster + Tumor cluster
-data_sample_name = data_filtered %>% filter(`Sample Name` == sample_name)
-data_sample_name = data_filtered_with_distance %>% filter(`Sample Name` == sample_name)
-# output =  do_analyse(data_sample_name, NULL, NULL,NULL,c(TRUE,TRUE),XposCol = 'Cell X Position', YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', sample_name)
+samplename_path = "C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/HO105-194_[16067,37856]_cell_seg_data.txt" # PD-L1 positive cluster + Tumor cluster
 
-output = do_analyse(data_with_distance, pheno_vector_absolut, colors_absolut,NULL, plotter = c(FALSE,TRUE),XposCol = 'Cell X Position', YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', sample_name, r_vec = r_vec)
-stop("helloe1")
-sample_name = "HO105-194_[15564,37856].im3" # PD-L1 positive cluster + Tumor cluster
-#output =  do_analyse(merged_filtered_with_distance, statistics, sample_name, missing_list, plotter)
-output =  do_analyse(data_sample_name, NULL, NULL,NULL,c(TRUE,TRUE),XposCol = 'Cell X Position', YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', sample_name)
+data = purrr::map_df(samplename_path, read_cell_seg_data, pixels_per_micron = getOption("phenoptr.pixels.per.micron"))
+data_with_distance = data %>%
+  do(bind_cols(., find_nearest_distance(.)))
 
-sample_name = "HO105-194_[16029,38205].im3" # not clustered
-#output = do_analyse(merged_filtered_with_distance, statistics, sample_name, missing_list, plotter)
-output =  do_analyse(data_sample_name, NULL, NULL,NULL,c(TRUE,TRUE),XposCol = 'Cell X Position', YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', sample_name)
+samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/","")
+samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
+samplename = samplename_path
+
+output = do_analyse(data_with_distance, pheno_vector_absolut, colors_absolut, NULL, plotter = c(FALSE,FALSE),XposCol = 'Cell X Position', YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', samplename, r_vec = r_vec)
+
+samples_output[[samplename]] = output
+
+
+
+samplename_path = "C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/HO105-194_[15564,37856]_cell_seg_data.txt" # PD-L1 positive cluster + Tumor cluster
+
+data = purrr::map_df(samplename_path, read_cell_seg_data, pixels_per_micron = getOption("phenoptr.pixels.per.micron"))
+data_with_distance = data %>%
+  do(bind_cols(., find_nearest_distance(.)))
+
+samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/","")
+samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
+samplename = samplename_path
+
+output = do_analyse(data_with_distance, pheno_vector_absolut, colors_absolut, NULL, plotter = c(FALSE,FALSE),XposCol = 'Cell X Position', YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', samplename, r_vec = r_vec)
+
+samples_output[[samplename]] = output
+
+
+
+samplename_path = "C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/HO105-194_[16029,38205]_cell_seg_data.txt" # not clustered
+
+data = purrr::map_df(samplename_path, read_cell_seg_data, pixels_per_micron = getOption("phenoptr.pixels.per.micron"))
+data_with_distance = data %>%
+  do(bind_cols(., find_nearest_distance(.)))
+
+samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/","")
+samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
+samplename = samplename_path
+
+output = do_analyse(data_with_distance, pheno_vector_absolut, colors_absolut, NULL, plotter = c(FALSE,FALSE),XposCol = 'Cell X Position', YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', samplename, r_vec = r_vec)
+
+samples_output[[samplename]] = output
+
 ```
 
 ```{r RUN data for extreme cases: HO105-186}
 # HO105-186
-sample_name = "HO105-186_[18941,59427].im3" # PD-L1 positive cluster + Tumor cluster
-#output = do_analyse(merged_filtered_with_distance, statistics, sample_name, missing_list, plotter)
-output =  do_analyse(data_sample_name, NULL, NULL,NULL,c(TRUE,TRUE),XposCol = 'Cell X Position', YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', sample_name)
 
-sample_name = "HO105-186_[18837,59867].im3" # PD-L1 positive cluster + Tumor cluster
-#output = do_analyse(merged_filtered_with_distance, statistics, sample_name, missing_list, plotter)
-output =  do_analyse(data_sample_name, NULL, NULL,NULL,c(TRUE,TRUE),XposCol = 'Cell X Position', YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', sample_name)
+source("spatstat_vectra.R")
 
-sample_name = "HO105-186_[18127,59130].im3" # PD-L1 positive cluster + Tumor cluster
-#output = do_analyse(merged_filtered_with_distance, statistics, sample_name, missing_list, plotter)
-output =  do_analyse(data_sample_name, NULL, NULL,NULL,c(TRUE,TRUE),XposCol = 'Cell X Position', YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', sample_name)
 
-sample_name = "HO105-186_[14661,55645].im3" # PD-L1 positive cluster + Tumor cluster
-#output = do_analyse(merged_filtered_with_distance, statistics, sample_name, missing_list, plotter)
-output =  do_analyse(data_sample_name, NULL, NULL,NULL,c(TRUE,TRUE),XposCol = 'Cell X Position', YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', sample_name)
+statistics_list = list()
+statistic_mean_list = list()
+all_types_options_list = list()
+missing_list = list()
+r_close_list = list()
+statistic_close_list = list()
+r_vec = c(10,20)
 
-sample_name = "HO105-186_[14121,55575].im3" # PD-L1 positive cluster + Tumor cluster
-#output = do_analyse(merged_filtered_with_distance, statistics, sample_name, missing_list, plotter)
-output =  do_analyse(data_sample_name, NULL, NULL,NULL,c(TRUE,TRUE),XposCol = 'Cell X Position', YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', sample_name)
+# run for one sample name
+
+samples_output = list()
+
+# data from Marit: extreme cases
+
+
+
+samplename_path = "C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/HO105-186_[18941,59427]_cell_seg_data.txt" # PD-L1 positive cluster + Tumor cluster
+
+data = purrr::map_df(samplename_path, read_cell_seg_data, pixels_per_micron = getOption("phenoptr.pixels.per.micron"))
+data_with_distance = data %>%
+  do(bind_cols(., find_nearest_distance(.)))
+
+samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/","")
+samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
+samplename = samplename_path
+
+output = do_analyse(data_with_distance, pheno_vector_absolut, colors_absolut, NULL, plotter = c(FALSE,FALSE),XposCol = 'Cell X Position', YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', samplename, r_vec = r_vec)
+
+samples_output[[samplename]] = output
+
+
+
+samplename_path = "C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/HO105-186_[18837,59867]_cell_seg_data.txt" # PD-L1 positive cluster + Tumor cluster
+
+data = purrr::map_df(samplename_path, read_cell_seg_data, pixels_per_micron = getOption("phenoptr.pixels.per.micron"))
+data_with_distance = data %>%
+  do(bind_cols(., find_nearest_distance(.)))
+
+samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/","")
+samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
+samplename = samplename_path
+
+output = do_analyse(data_with_distance, pheno_vector_absolut, colors_absolut, NULL, plotter = c(FALSE,FALSE),XposCol = 'Cell X Position', YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', samplename, r_vec = r_vec)
+
+samples_output[[samplename]] = output
+
+
+
+samplename_path = "C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/HO105-186_[18127,59130]_cell_seg_data.txt" # PD-L1 positive cluster + Tumor cluster
+
+data = purrr::map_df(samplename_path, read_cell_seg_data, pixels_per_micron = getOption("phenoptr.pixels.per.micron"))
+data_with_distance = data %>%
+  do(bind_cols(., find_nearest_distance(.)))
+
+samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/","")
+samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
+samplename = samplename_path
+
+output = do_analyse(data_with_distance, pheno_vector_absolut, colors_absolut, NULL, plotter = c(FALSE,FALSE),XposCol = 'Cell X Position', YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', samplename, r_vec = r_vec)
+
+samples_output[[samplename]] = output
+
+
+
+samplename_path = "C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/HO105-186_[14661,55645]_cell_seg_data.txt" # PD-L1 positive cluster + Tumor cluster
+
+data = purrr::map_df(samplename_path, read_cell_seg_data, pixels_per_micron = getOption("phenoptr.pixels.per.micron"))
+data_with_distance = data %>%
+  do(bind_cols(., find_nearest_distance(.)))
+
+samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/","")
+samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
+samplename = samplename_path
+
+output = do_analyse(data_with_distance, pheno_vector_absolut, colors_absolut, NULL, plotter = c(FALSE,FALSE),XposCol = 'Cell X Position', YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', samplename, r_vec = r_vec)
+
+samples_output[[samplename]] = output
+
+
+
+samplename_path = "C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/HO105-186_[14121,55575]_cell_seg_data.txt" # PD-L1 positive cluster + Tumor cluster
+
+data = purrr::map_df(samplename_path, read_cell_seg_data, pixels_per_micron = getOption("phenoptr.pixels.per.micron"))
+data_with_distance = data %>%
+  do(bind_cols(., find_nearest_distance(.)))
+
+samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/","")
+samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
+samplename = samplename_path
+
+output = do_analyse(data_with_distance, pheno_vector_absolut, colors_absolut, NULL, plotter = c(FALSE,FALSE),XposCol = 'Cell X Position', YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', samplename, r_vec = r_vec)
+
+samples_output[[samplename]] = output
+
+view(samples_output)
 ```
 
 ```{r RUN data for extreme cases: HO105-101}
 # HO105-101
-sample_name = "HO105-101_[9072,46519].im3" # Spreadout Tumor
-#output =do_analyse(merged_filtered_with_distance, statistics, sample_name, missing_list, plotter)
-output =  do_analyse(data_sample_name, NULL, NULL,NULL,c(TRUE,TRUE),XposCol = 'Cell X Position', YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', sample_name)
+source("spatstat_vectra.R")
+
+
+statistics_list = list()
+statistic_mean_list = list()
+all_types_options_list = list()
+missing_list = list()
+r_close_list = list()
+statistic_close_list = list()
+r_vec = c(10,20)
+
+# run for one sample name
+
+samples_output = list()
+
+
+samplename_path = "C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/HO105-101_[9072,46519]_cell_seg_data.txt" # Spreadout Tumor
+
+data = purrr::map_df(samplename_path, read_cell_seg_data, pixels_per_micron = getOption("phenoptr.pixels.per.micron"))
+data_with_distance = data %>%
+  do(bind_cols(., find_nearest_distance(.)))
+
+samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/","")
+samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
+samplename = samplename_path
+
+output = do_analyse(data_with_distance, pheno_vector_absolut, colors_absolut, NULL, plotter = c(FALSE,FALSE),XposCol = 'Cell X Position', YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', samplename, r_vec = r_vec)
+
+samples_output[[samplename]] = output
+
+view(samples_output)
 ```
 
 ```{r RUN data for extreme cases: HO105-150}
 # HO105-150
-sample_name = "HO105-150_[13112,45808].im3" 
-#output = do_analyse(merged_filtered_with_distance, statistics, sample_name, missing_list, plotter)
-output =  do_analyse(data_sample_name, NULL, NULL,NULL,c(TRUE,TRUE),XposCol = 'Cell X Position', YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', sample_name)
+source("spatstat_vectra.R")
+
+
+statistics_list = list()
+statistic_mean_list = list()
+all_types_options_list = list()
+missing_list = list()
+r_close_list = list()
+statistic_close_list = list()
+r_vec = c(10,20)
+
+# run for one sample name
+
+samples_output = list()
+
+
+samplename_path = "C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/HO105-150_[13112,45808]_cell_seg_data.txt" # Spreadout Tumor
+
+data = purrr::map_df(samplename_path, read_cell_seg_data, pixels_per_micron = getOption("phenoptr.pixels.per.micron"))
+data_with_distance = data %>%
+  do(bind_cols(., find_nearest_distance(.)))
+
+samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/","")
+samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
+samplename = samplename_path
+
+output = do_analyse(data_with_distance, pheno_vector_absolut, colors_absolut, NULL, plotter = c(FALSE,FALSE),XposCol = 'Cell X Position', YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', samplename, r_vec = r_vec)
+
+samples_output[[samplename]] = output
+
+
+view(samples_output)
 ```
 
 ```{r RUN data for extreme cases: HO105-120}
 # HO105-120
-sample_name = "HO105-120_[5524,47985].im3" 
-#output = do_analyse(merged_filtered_with_distance, statistics, sample_name, missing_list, plotter)
-output =  do_analyse(data_sample_name, NULL, NULL,NULL,c(TRUE,TRUE),XposCol = 'Cell X Position', YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', sample_name)
+source("spatstat_vectra.R")
+
+
+statistics_list = list()
+statistic_mean_list = list()
+all_types_options_list = list()
+missing_list = list()
+r_close_list = list()
+statistic_close_list = list()
+r_vec = c(10,20)
+
+# run for one sample name
+
+samples_output = list()
+
+samplename_path = "C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/HO105-120_[5524,47985]_cell_seg_data.txt" # Spreadout Tumor
+
+data = purrr::map_df(samplename_path, read_cell_seg_data, pixels_per_micron = getOption("phenoptr.pixels.per.micron"))
+data_with_distance = data %>%
+  do(bind_cols(., find_nearest_distance(.)))
+
+samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/","")
+samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
+samplename = samplename_path
+
+output = do_analyse(data_with_distance, pheno_vector_absolut, colors_absolut, NULL, plotter = c(FALSE,FALSE),XposCol = 'Cell X Position', YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', samplename, r_vec = r_vec)
+
+samples_output[[samplename]] = output
+
+
+view(samples_output)
 ```
 
 ```{r RUN data for extreme cases: HO105-107}
 # HO105-107
-sample_name = "HO105-107_[11070,34907].im3" # T-cell cluster
-#output = do_analyse(merged_filtered_with_distance, statistics, sample_name, missing_list, plotter)
-output =  do_analyse(data_sample_name, NULL, NULL,NULL,c(TRUE,TRUE),XposCol = 'Cell X Position', YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', sample_name)
+source("spatstat_vectra.R")
+
+
+statistics_list = list()
+statistic_mean_list = list()
+all_types_options_list = list()
+missing_list = list()
+r_close_list = list()
+statistic_close_list = list()
+r_vec = c(10,20)
+
+# run for one sample name
+
+samples_output = list()
+
+samplename_path = "C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/HO105-107_[11070,34907]_cell_seg_data.txt" # T-cell cluster
+
+data = purrr::map_df(samplename_path, read_cell_seg_data, pixels_per_micron = getOption("phenoptr.pixels.per.micron"))
+data_with_distance = data %>%
+  do(bind_cols(., find_nearest_distance(.)))
+
+samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/","")
+samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
+samplename = samplename_path
+
+output = do_analyse(data_with_distance, pheno_vector_absolut, colors_absolut, NULL, plotter = c(FALSE,FALSE),XposCol = 'Cell X Position', YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', samplename, r_vec = r_vec)
+
+samples_output[[samplename]] = output
+
+
+view(samples_output)
 ```
 
 ```{r RUN data for extreme cases: HO105-171_3}
 # HO105-171_3
-sample_name = "HO105-171_3_[6297,46984].im3" # T-cell cluster surrounded by Other
-#output = do_analyse(merged_filtered_with_distance, statistics, sample_name, missing_list, plotter)
-output =  do_analyse(data_sample_name, NULL, NULL,NULL,c(TRUE,TRUE),XposCol = 'Cell X Position', YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', sample_name)
+source("spatstat_vectra.R")
 
-sample_name = "HO105-171_3_[12870,46254].im3" # T-cell cluster surrounded by Other
-#output = do_analyse(merged_filtered_with_distance, statistics, sample_name, missing_list, plotter)
-output =  do_analyse(data_sample_name, NULL, NULL,NULL,c(TRUE,TRUE),XposCol = 'Cell X Position', YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', sample_name)
+
+statistics_list = list()
+statistic_mean_list = list()
+all_types_options_list = list()
+missing_list = list()
+r_close_list = list()
+statistic_close_list = list()
+r_vec = c(10,20)
+
+# run for one sample name
+
+samples_output = list()
+
+
+samplename_path = "C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/HO105-171_3_[6297,46984]_cell_seg_data.txt" # T-cell cluster surrounded by Other
+
+data = purrr::map_df(samplename_path, read_cell_seg_data, pixels_per_micron = getOption("phenoptr.pixels.per.micron"))
+data_with_distance = data %>%
+  do(bind_cols(., find_nearest_distance(.)))
+
+samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/","")
+samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
+samplename = samplename_path
+
+output = do_analyse(data_with_distance, pheno_vector_absolut, colors_absolut, NULL, plotter = c(FALSE,FALSE),XposCol = 'Cell X Position', YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', samplename, r_vec = r_vec)
+
+samples_output[[samplename]] = output
+
+
+
+samplename_path = "C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/HO105-171_3_[12870,46254]_cell_seg_data.txt" # T-cell cluster surrounded by Other
+
+data = purrr::map_df(samplename_path, read_cell_seg_data, pixels_per_micron = getOption("phenoptr.pixels.per.micron"))
+data_with_distance = data %>%
+  do(bind_cols(., find_nearest_distance(.)))
+
+samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/","")
+samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
+samplename = samplename_path
+
+output = do_analyse(data_with_distance, pheno_vector_absolut, colors_absolut, NULL, plotter = c(FALSE,FALSE),XposCol = 'Cell X Position', YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', samplename, r_vec = r_vec)
+
+samples_output[[samplename]] = output
+
+
+view(samples_output)
 ```
 
