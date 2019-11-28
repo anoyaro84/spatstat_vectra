@@ -115,6 +115,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
     all_types = alltypes(csd_ppp,fun = paste(option), dataname = sample_name, envelope = FALSE)
     
     all_types_options_sample_name[[option]] = all_types
+    
     if (plotter[2] == TRUE){
       plot(all_types)
     }
@@ -125,7 +126,19 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
     statistic_close_list[[option]] = output[[2]]
     
   }
-  return(list(pairwise_distances, counts_sample, density_sample, MED_min, MED, MAD_min, MAD, r_close_list, statistic_close_list, all_types_options_sample_name))
+  output_all = list()
+  output_all[["pairwise_distances"]] = pairwise_distances
+  output_all[["counts_sample"]] = counts_sample
+  output_all[["density_sample"]] = density_sample
+  output_all[["MED_min"]] = MED_min
+  output_all[["MED"]] = MED
+  output_all[["MAD_min"]] = MAD_min
+  output_all[["MAD"]] = MAD
+  output_all[["r_close_list"]] = r_close_list
+  output_all[["statistic_close_list"]] = statistic_close_list
+  output_all[["all_types_options_sample_name"]] = all_types_options_sample_name
+
+  return(output_all)
 }
 
 
