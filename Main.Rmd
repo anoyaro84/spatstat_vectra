@@ -127,12 +127,13 @@ for (samplename in paths[1:1]){
 source("spatstat_vectra.R")
 
 
-statistics_list = list()
-statistic_mean_list = list()
-all_types_options_list = list()
-missing_list = list()
-r_close_list = list()
-statistic_close_list = list()
+# colors according to slides Marit and plot conventions
+pheno_vector_absolut = c("CD163+PDL1-","CD163+PDL1+","CD3+CD8-PD1-", "CD3+CD8-PD1+", "CD3+CD8+PD1-", "CD3+CD8+PD1+","Other","Other PDL1+","PAX5+PDL1-", "PAX5+PDL1+")
+
+colors_absolut = c("magenta", "brown", "red", "blue", "green", "yellow", "gray", "pink", "orange", "cyan")
+names(colors_absolut) = pheno_vector_absolut
+
+
 r_vec = c(10,20)
 
 # run for one sample name
@@ -196,12 +197,13 @@ samples_output[[samplename]] = output
 source("spatstat_vectra.R")
 
 
-statistics_list = list()
-statistic_mean_list = list()
-all_types_options_list = list()
-missing_list = list()
-r_close_list = list()
-statistic_close_list = list()
+# colors according to slides Marit and plot conventions
+pheno_vector_absolut = c("CD163+PDL1-","CD163+PDL1+","CD3+CD8-PD1-", "CD3+CD8-PD1+", "CD3+CD8+PD1-", "CD3+CD8+PD1+","Other","Other PDL1+","PAX5+PDL1-", "PAX5+PDL1+")
+
+colors_absolut = c("magenta", "brown", "red", "blue", "green", "yellow", "gray", "pink", "orange", "cyan")
+names(colors_absolut) = pheno_vector_absolut
+
+
 r_vec = c(10,20)
 
 # run for one sample name
@@ -298,12 +300,13 @@ view(samples_output)
 source("spatstat_vectra.R")
 
 
-statistics_list = list()
-statistic_mean_list = list()
-all_types_options_list = list()
-missing_list = list()
-r_close_list = list()
-statistic_close_list = list()
+# colors according to slides Marit and plot conventions
+pheno_vector_absolut = c("CD163+PDL1-","CD163+PDL1+","CD3+CD8-PD1-", "CD3+CD8-PD1+", "CD3+CD8+PD1-", "CD3+CD8+PD1+","Other","Other PDL1+","PAX5+PDL1-", "PAX5+PDL1+")
+
+colors_absolut = c("magenta", "brown", "red", "blue", "green", "yellow", "gray", "pink", "orange", "cyan")
+names(colors_absolut) = pheno_vector_absolut
+
+
 r_vec = c(10,20)
 
 # run for one sample name
@@ -333,12 +336,13 @@ view(samples_output)
 source("spatstat_vectra.R")
 
 
-statistics_list = list()
-statistic_mean_list = list()
-all_types_options_list = list()
-missing_list = list()
-r_close_list = list()
-statistic_close_list = list()
+# colors according to slides Marit and plot conventions
+pheno_vector_absolut = c("CD163+PDL1-","CD163+PDL1+","CD3+CD8-PD1-", "CD3+CD8-PD1+", "CD3+CD8+PD1-", "CD3+CD8+PD1+","Other","Other PDL1+","PAX5+PDL1-", "PAX5+PDL1+")
+
+colors_absolut = c("magenta", "brown", "red", "blue", "green", "yellow", "gray", "pink", "orange", "cyan")
+names(colors_absolut) = pheno_vector_absolut
+
+
 r_vec = c(10,20)
 
 # run for one sample name
@@ -369,12 +373,13 @@ view(samples_output)
 source("spatstat_vectra.R")
 
 
-statistics_list = list()
-statistic_mean_list = list()
-all_types_options_list = list()
-missing_list = list()
-r_close_list = list()
-statistic_close_list = list()
+# colors according to slides Marit and plot conventions
+pheno_vector_absolut = c("CD163+PDL1-","CD163+PDL1+","CD3+CD8-PD1-", "CD3+CD8-PD1+", "CD3+CD8+PD1-", "CD3+CD8+PD1+","Other","Other PDL1+","PAX5+PDL1-", "PAX5+PDL1+")
+
+colors_absolut = c("magenta", "brown", "red", "blue", "green", "yellow", "gray", "pink", "orange", "cyan")
+names(colors_absolut) = pheno_vector_absolut
+
+
 r_vec = c(10,20)
 
 # run for one sample name
@@ -404,12 +409,13 @@ view(samples_output)
 source("spatstat_vectra.R")
 
 
-statistics_list = list()
-statistic_mean_list = list()
-all_types_options_list = list()
-missing_list = list()
-r_close_list = list()
-statistic_close_list = list()
+# colors according to slides Marit and plot conventions
+pheno_vector_absolut = c("CD163+PDL1-","CD163+PDL1+","CD3+CD8-PD1-", "CD3+CD8-PD1+", "CD3+CD8+PD1-", "CD3+CD8+PD1+","Other","Other PDL1+","PAX5+PDL1-", "PAX5+PDL1+")
+
+colors_absolut = c("magenta", "brown", "red", "blue", "green", "yellow", "gray", "pink", "orange", "cyan")
+names(colors_absolut) = pheno_vector_absolut
+
+
 r_vec = c(10,20)
 
 # run for one sample name
@@ -439,12 +445,13 @@ view(samples_output)
 source("spatstat_vectra.R")
 
 
-statistics_list = list()
-statistic_mean_list = list()
-all_types_options_list = list()
-missing_list = list()
-r_close_list = list()
-statistic_close_list = list()
+# colors according to slides Marit and plot conventions
+pheno_vector_absolut = c("CD163+PDL1-","CD163+PDL1+","CD3+CD8-PD1-", "CD3+CD8-PD1+", "CD3+CD8+PD1-", "CD3+CD8+PD1+","Other","Other PDL1+","PAX5+PDL1-", "PAX5+PDL1+")
+
+colors_absolut = c("magenta", "brown", "red", "blue", "green", "yellow", "gray", "pink", "orange", "cyan")
+names(colors_absolut) = pheno_vector_absolut
+
+
 r_vec = c(10,20)
 
 # run for one sample name

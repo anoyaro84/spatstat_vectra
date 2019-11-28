@@ -217,8 +217,8 @@ interpolate_r <- function(all_types, r_vec, option){
           next(paste("skip", range, option))
         }
         
-        stat1 = all_types[["fns"]][[range]][["isotropic"]][left]
-        stat2 = all_types[["fns"]][[range]][["isotropic"]][right]
+        stat1 = all_types[["fns"]][[range]][["iso"]][left]
+        stat2 = all_types[["fns"]][[range]][["iso"]][right]
         
         a = (stat2-stat1)/(r2-r1) # y=ax+b
         b = stat2 - a*r2
