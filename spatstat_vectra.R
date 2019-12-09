@@ -8,14 +8,15 @@ library(zoo)
 
 # phenotype can be converted by the "phenotype argument".
 # why statistics was used as argument?
-do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL, plotter = c(FALSE,FALSE), 
+do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), 
                        XposCol = 'Cell X Position', YposCol = 'Cell Y Position',
-                       PhenoCol = 'Phenotype', sample_name = NULL, r_vec = NULL, ...) {
+                       PhenoCol = 'Phenotype', sample_name = NULL, r_vec = NULL, envelope_bool = TRUE, ...) {
   
   csd <- Intable[, c(PhenoCol, XposCol, YposCol)]
   colnames(csd) = c('Phenotype', 'Cell X Position',  'Cell Y Position')
   pheno_vector = unique(csd$Phenotype)
-  # print(pheno_vector)
+  print(pheno_vector)
+  
   if (is.null(sample_name)) {
 	  sample_name = 'Input sample'
   }
@@ -43,17 +44,21 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
     r_vec = dim_scale*c(0.1,0.9)
     # r_vec currently does not work well when given NULL due to several automated settings for the grid of r in the settings of each option
     # ASSUMPTION
-    
   }
   
-  print(paste("r_vec is", r_vec))
   
-  # generate pairwise distance matrix for csd
-  pairwise_distances = distance_matrix(Intable)
+  # generate pairwise distance matrix for csd and filter csd on ""
+  pairwise_distance_all = distance_matrix(csd)
+
+  rows = select_rows(csd,pheno_vector)
+  pairwise_distance_filtered = pairwise_distance_all[rows,]
+  csd <- csd[rows, ]
+
   
   # normal statistics: MAD and MED
+  # uses Intable as it needs the minimal distances in the table and their ID's
   
-  output = getMAD(Intable, pairwise_distances, pheno_vector)
+  output = getMAD(Intable, pairwise_distance_all, pheno_vector)
   MED_min = output[[1]]
   MED = output[[2]]
   MAD_min = output[[3]]
@@ -66,13 +71,14 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
   counts_sample = output[[1]]
   density_sample = output[[2]]
   
+  
   # normal statistics: Area and maxnorm
   dim_n = length(PhenoOrder)
   dim_m = 2*dim_n + 2
   
-  statistics = as.data.frame(matrix(rep(0,dim_n*dim_m),dim_n, dim_m))
-  colnames(statistics) = c(paste("Area K", PhenoOrder),"Area Kdot", paste("Maxnorm K", PhenoOrder), "Maxnorm Kdot")
-  rownames(statistics) = PhenoOrder
+  # statistics = as.data.frame(matrix(rep(0,dim_n*dim_m),dim_n, dim_m))
+  # colnames(statistics) = c(paste("Area K", PhenoOrder),"Area Kdot", paste("Maxnorm K", PhenoOrder), "Maxnorm Kdot")
+  # rownames(statistics) = PhenoOrder
   
   
   # Replace "+" with "T" and "-" with "F" in phenotype vector and in the csd for correct functioning of extracting inbuild statistics.
@@ -84,7 +90,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
   csd$Phenotype = str_replace_all(csd$Phenotype,"[-]","F")
   
   n = length(pheno_vector)  
-  #sample_name = str_replace(sample_name,".im3","")
+  
   
   
   csd_ppp = ppp(x=csd[[XposCol]], y=csd[[YposCol]],
@@ -94,6 +100,19 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
   if (plotter[1] == TRUE){
     plot1 = plot(csd_ppp, cols = Cols,
                  main = paste("Coordinates of cells and their phenotype in sample", sample_name), pch = 20)
+  }
+  
+  quadratcount_pvalue = list()
+
+  for (phenotype in pheno_vector){
+    splitted = csd_ppp[marks(csd_ppp) == phenotype]
+    quadrattest = quadrat.test(splitted)
+    quadratcount_pvalue[[phenotype]] = quadrattest$p.value
+    
+    if (plotter[2] == TRUE){
+      plot(splitted, main = paste("counts of", phenotype, "in sample", sample_name), cols = Cols,  pch = 20)
+      plot(quadrat.test(splitted), add = TRUE)
+    }
   }
   
   
@@ -107,35 +126,44 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
  
   r_close_list = list()
   statistic_close_list = list()
-  
+  normalized_list = list()
   
   
   for (option in options){
     
-    all_types = alltypes(csd_ppp,fun = paste(option), dataname = sample_name, envelope = FALSE)
+    if ((option == "K")|| (option == "L") || (option == "Kdot")|| (option == "Ldot") || (option == "pcf")){
+      all_types = alltypes(csd_ppp,fun = paste(option), dataname = sample_name, envelope = envelope_bool, correction = "iso")
+    } else{
+      all_types = alltypes(csd_ppp,fun = paste(option), dataname = sample_name, envelope = envelope_bool, correction = "km")
+    }
+
     
     all_types_options_sample_name[[option]] = all_types
     
-    if (plotter[2] == TRUE){
+    if (plotter[3] == TRUE){
       plot(all_types)
     }
     
-    output = interpolate_r(all_types, r_vec, option)
+    output = interpolate_r(all_types, r_vec, option, envelope_bool)
     
     r_close_list[[option]] = output[[1]]
     statistic_close_list[[option]] = output[[2]]
+    normalized_list[[option]] = output[[3]]
     
   }
   output_all = list()
   output_all[["pairwise_distances"]] = pairwise_distances
   output_all[["counts_sample"]] = counts_sample
+  output_all[["Area_sample"]] = Area_sample
   output_all[["density_sample"]] = density_sample
+  output_all[["quadratcount_pvalue"]] = quadratcount_pvalue
   output_all[["MED_min"]] = MED_min
   output_all[["MED"]] = MED
   output_all[["MAD_min"]] = MAD_min
   output_all[["MAD"]] = MAD
   output_all[["r_close_list"]] = r_close_list
   output_all[["statistic_close_list"]] = statistic_close_list
+  output_all[["normalized_list"]] = normalized_list
   output_all[["all_types_options_sample_name"]] = all_types_options_sample_name
 
   return(output_all)
@@ -193,17 +221,22 @@ getDensity <- function(data, pheno_vector, Area_sample){
 }
 
 # function interpolate statistic for given r
-interpolate_r <- function(all_types, r_vec, option){
+interpolate_r <- function(all_types, r_vec, option, envelope_bool){
   
   r_close_list = list()
   statistic_close_list = list()
+  normalized_list = list()
+  
+  print(option)
   
   for (r_i in r_vec){
     
     r_close_list[[paste("radius", r_i)]] = list()
     statistic_close_list[[paste("radius", r_i)]] = list()
-    # print(length(all_types$fns))
+    normalized_list[[paste("radius", r_i)]] = list()
+    
     for (range in (1:length(all_types$fns))){
+      
       
       r_close_list[[paste("radius", r_i)]][[paste(option, "fns which",range)]] = r_i
       
@@ -212,7 +245,7 @@ interpolate_r <- function(all_types, r_vec, option){
       dif_abs = abs(dif)
       condition = match(min(dif_abs),dif_abs)
   
-      if (dif[condition]>0){
+      if (dif[condition] > 0){
         left = condition - 1
         right = condition
       }else{
@@ -225,49 +258,180 @@ interpolate_r <- function(all_types, r_vec, option){
 
       if ((option == "K")|| (option == "L") || (option == "Kdot")|| (option == "Ldot") || (option == "pcf")){
         
-        if (max(r_emperic)< r_i){
-          warning("default r interval is to small")
-          next(paste("skip", range, option))
-        }
         
-        stat1 = all_types[["fns"]][[range]][["iso"]][left]
-        stat2 = all_types[["fns"]][[range]][["iso"]][right]
-        
-        a = (stat2-stat1)/(r2-r1) # y=ax+b
-        b = stat2 - a*r2
-        stat = a*(r_i-r2)+stat2
-        
-        statistic_close_list[[paste("radius", r_i)]][[paste(option, "fns which",range)]] = stat
-        
-        # print(paste("r left of r_i is", r1, ",r_i is", r_i, ",right of r_i is", r2))
-        # print(paste("stat left of r_i is", stat1, ",stat is", stat, ",right of stat is", stat2))
-
-        
-      } else{
         
         if (max(r_emperic)< r_i){
           warning("default r interval is to small")
           next(paste("skip", range, option))
         }
         
-        stat_emperic = all_types[["fns"]][[range]][["km"]] #ASSUMPTION temporarily
+        
+        if (envelope_bool == TRUE){
+          
+          
+          
+          higher_bound = all_types[["fns"]][[range]][["hi"]]
+          high1 = higher_bound[left]
+          high2 = higher_bound[right]
+          print(paste("high1",c(high1,high2)))
+          a = (high2-high1)/(r2-r1) # y=ax+b
+          b = high2 - a*r2
+          high = a*(r_i-r2)+high2
+          
+          lower_bound = all_types[["fns"]][[range]][["lo"]]
+          low1 = lower_bound[left]
+          low2 = lower_bound[right]
+          print(paste("low1",c(low1,low2)))
+          a = (low2-low1)/(r2-r1) # y=ax+b
+          b = low2 - a*r2
+          low = a*(r_i-r2)+low2
+          
+          stat_theoretic = all_types[["fns"]][[range]][["theo"]]
+          stat_theo1 = stat_theoretic[left]
+          stat_theo2 = stat_theoretic[right]
+          a = (stat_theo2-stat_theo1)/(r2-r1) # y=ax+b
+          b = stat_theo2 - a*r2
+          stat_theo = a*(r_i-r2)+stat_theo2
+          
+          stat1 = all_types[["fns"]][[range]][["obs"]][left]
+          stat2 = all_types[["fns"]][[range]][["obs"]][right]
+          a = (stat2-stat1)/(r2-r1) # y=ax+b
+          b = stat2 - a*r2
+          stat = a*(r_i-r2)+stat2
+          
+        if(is.na(high) || is.na(low)){
+          warning("NA in all_types[[\"fns\"]][[range]], put in NaN")
+          normalized = NaN
+        }else if (high - low == 0){
+            warning("deviding by 0")
+            normalized = NaN
+        } else{
+            normalized = (stat-stat_theo)/abs(high-low)
+        }
+          
+          statistic_close_list[[paste("radius", r_i)]][[paste(option, "fns which",range)]] = stat
+          normalized_list[[paste("radius", r_i)]][[paste(option, "fns which",range)]] = normalized
+          
+        } # else{ # envelope_bool == FALSE Not needed?
+# 
+#           browser()
+# 
+#           a = (stat_theo2-stat_theo1)/(r2-r1) # y=ax+b
+#           b = stat_theo2 - a*r2
+#           stat_theo = a*(r_i-r2)+stat_theo2
+# 
+#           stat1 = all_types[["fns"]][[range]][["iso"]][left]
+#           stat2 = all_types[["fns"]][[range]][["iso"]][right]
+# 
+#           a = (stat2-stat1)/(r2-r1) # y=ax+b
+#           b = stat2 - a*r2
+#           stat = a*(r_i-r2)+stat2
+#         }
 
-        stat1 = all_types[["fns"]][[range]][["km"]][left]
-        stat2 = all_types[["fns"]][[range]][["km"]][right]
         
-        a = (stat2-stat1)/(r2-r1)
-        b = stat2 - a*r2
-        stat = a*(r_i-r2)+stat2
+      } else{ # option == "G","F", "J","Gdot", "Jdot"
         
-        statistic_close_list[[paste("radius", r_i)]][[paste(option, "fns which",range)]] = stat
+        # browser()
         
-        # print(paste("r left of r_i is", r1, ",r_i is", r_i, ",right of r_i is", r2))
-        # print(paste("stat left of r_i is", stat1, ",stat is", stat, ",right of stat is", stat2))
+        if (max(r_emperic)< r_i){
+          warning("default r interval is to small")
+          next(paste("skip", range, option))
+        }
+        
+        if (envelope_bool == TRUE){
+          
+          
+          # browser()
+          higher_bound = all_types[["fns"]][[range]][["hi"]]
+          high1 = higher_bound[left]
+          high2 = higher_bound[right]
+          print(paste("high1",c(high1,high2)))
+          a = (high2-high1)/(r2-r1) # y=ax+b
+          b = high2 - a*r2
+          high = a*(r_i-r2)+high2
+          
+          lower_bound = all_types[["fns"]][[range]][["lo"]]
+          low1 = lower_bound[left]
+          low2 = lower_bound[right]
+          print(paste("low1",c(low1,low2)))
+          a = (low2-low1)/(r2-r1) # y=ax+b
+          b = low2 - a*r2
+          low = a*(r_i-r2)+low2
+          
+          stat_theoretic = all_types[["fns"]][[range]][["theo"]]
+          stat_theo1 = stat_theoretic[left]
+          stat_theo2 = stat_theoretic[right]
+          a = (stat_theo2-stat_theo1)/(r2-r1) # y=ax+b
+          b = stat_theo2 - a*r2
+          stat_theo = a*(r_i-r2)+stat_theo2
+          
+          stat1 = all_types[["fns"]][[range]][["obs"]][left]
+          stat2 = all_types[["fns"]][[range]][["obs"]][right]
+          a = (stat2-stat1)/(r2-r1) # y=ax+b
+          b = stat2 - a*r2
+          stat = a*(r_i-r2)+stat2
+          
+          if(is.na(high) || is.na(low)){
+            warning("NA in all_types[[\"fns\"]][[range]], put in NaN")
+            normalized = NaN
+          }else if (high - low == 0){
+            warning("deviding by 0")
+            normalized = NaN
+          } else{
+            normalized = (stat-stat_theo)/abs(high-low)
+          }
+          
+          statistic_close_list[[paste("radius", r_i)]][[paste(option, "fns which",range)]] = stat
+          normalized_list[[paste("radius", r_i)]][[paste(option, "fns which",range)]] = normalized
+          
+        } # else{ # envelope_bool == FALSE
+          # 
+          # browser()
+          # 
+          # stat1 = all_types[["fns"]][[range]][["km"]][left]
+          # stat2 = all_types[["fns"]][[range]][["km"]][right]
+          # 
+          # a = (stat2-stat1)/(r2-r1) # y=ax+b
+          # b = stat2 - a*r2
+          # stat = a*(r_i-r2)+stat2
+        # }
+        # browser()
+        # stat1 = all_types[["fns"]][[range]][["iso"]][left]
+        # stat2 = all_types[["fns"]][[range]][["iso"]][right]
+        # 
+        # a = (stat2-stat1)/(r2-r1) # y=ax+b
+        # b = stat2 - a*r2
+        # stat = a*(r_i-r2)+stat2
+        # 
+        # statistic_close_list[[paste("radius", r_i)]][[paste(option, "fns which",range)]] = stat
+        # 
+        # # print(paste("r left of r_i is", r1, ",r_i is", r_i, ",right of r_i is", r2))
+        # # print(paste("stat left of r_i is", stat1, ",stat is", stat, ",right of stat is", stat2))
+        
         
       }
+        # browser()
+        # stat_emperic = all_types[["fns"]][[range]][["km"]] #ASSUMPTION temporarily
+        # 
+        # stat1 = all_types[["fns"]][[range]][["km"]][left]
+        # stat2 = all_types[["fns"]][[range]][["km"]][right]
+        # 
+        # a = (stat2-stat1)/(r2-r1)
+        # b = stat2 - a*r2
+        # stat = a*(r_i-r2)+stat2
+        # 
+        # statistic_close_list[[paste("radius", r_i)]][[paste(option, "fns which",range)]] = stat
+        # 
+        # (stat-theo)/|high-low|
+        
+        
+        # print(paste("r left of r_i is", r1, ",r_i is", r_i, ",right of r_i is", r2))
+        # print(paste("stat left of r_i is", stat1, ",stat is", stat, ",right of stat is", stat2))
+        
     }
   }
-  return(list(r_close_list, statistic_close_list))
+  
+  return(list(r_close_list, statistic_close_list, normalized_list))
 }
 
 
