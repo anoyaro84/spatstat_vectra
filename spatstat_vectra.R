@@ -98,8 +98,11 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
                               c(0, max(csd[[YposCol]]))),
                 marks = as.factor(csd[[PhenoCol]]))
   if (plotter[1] == TRUE){
-    plot1 = plot(csd_ppp, cols = Cols,
-                 main = paste("Coordinates of cells and their phenotype in sample", sample_name), pch = 20)
+    png(filename = paste(sample_name,".png"))
+    par(mar=c(6,6,6,6)+0.1, mgp = c(5,1,0))
+    plot(csd_ppp, cols = Cols,
+                 main = paste("Location of cells and their phenotype in sample", sample_name), pch = 20)
+    dev.off()
   }
   
   quadratcount_pvalue = list()
@@ -110,9 +113,12 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
     quadratcount_pvalue[[phenotype]] = quadrattest$p.value
     
     if (plotter[2] == TRUE){
+      png(filename = paste0(sample_name,"_quadratcounts_",phenotype,".png"))
+      par(mar=c(6,6,6,6)+0.1, mgp = c(5,1,0))
       plot(splitted, main = paste("counts of", phenotype, "in sample", sample_name), cols = Cols,  pch = 20)
-      plot(quadrat.test(splitted), add = TRUE)
-    }
+      plot(quadratcount(splitted), add = TRUE)
+      dev.off()
+      }
   }
   
   
@@ -141,7 +147,10 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
     all_types_options_sample_name[[option]] = all_types
     
     if (plotter[3] == TRUE){
+      png(filename = paste0(sample_name,"_statistic_",option,".png"))
+      par(mar=c(6,6,6,6)+0.1, mgp = c(5,1,0))
       plot(all_types)
+      dev.off()
     }
     
     output = interpolate_r(all_types, r_vec, option, envelope_bool)
@@ -152,7 +161,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
     
   }
   output_all = list()
-  output_all[["pairwise_distances"]] = pairwise_distances
+  output_all[["pairwise_distance_filtered"]] = pairwise_distance_filtered
   output_all[["counts_sample"]] = counts_sample
   output_all[["Area_sample"]] = Area_sample
   output_all[["density_sample"]] = density_sample
@@ -273,7 +282,7 @@ interpolate_r <- function(all_types, r_vec, option, envelope_bool){
           higher_bound = all_types[["fns"]][[range]][["hi"]]
           high1 = higher_bound[left]
           high2 = higher_bound[right]
-          print(paste("high1",c(high1,high2)))
+          # print(paste("high1",c(high1,high2)))
           a = (high2-high1)/(r2-r1) # y=ax+b
           b = high2 - a*r2
           high = a*(r_i-r2)+high2
@@ -281,7 +290,7 @@ interpolate_r <- function(all_types, r_vec, option, envelope_bool){
           lower_bound = all_types[["fns"]][[range]][["lo"]]
           low1 = lower_bound[left]
           low2 = lower_bound[right]
-          print(paste("low1",c(low1,low2)))
+          # print(paste("low1",c(low1,low2)))
           a = (low2-low1)/(r2-r1) # y=ax+b
           b = low2 - a*r2
           low = a*(r_i-r2)+low2
@@ -345,7 +354,7 @@ interpolate_r <- function(all_types, r_vec, option, envelope_bool){
           higher_bound = all_types[["fns"]][[range]][["hi"]]
           high1 = higher_bound[left]
           high2 = higher_bound[right]
-          print(paste("high1",c(high1,high2)))
+          # print(paste("high1",c(high1,high2)))
           a = (high2-high1)/(r2-r1) # y=ax+b
           b = high2 - a*r2
           high = a*(r_i-r2)+high2
@@ -353,7 +362,7 @@ interpolate_r <- function(all_types, r_vec, option, envelope_bool){
           lower_bound = all_types[["fns"]][[range]][["lo"]]
           low1 = lower_bound[left]
           low2 = lower_bound[right]
-          print(paste("low1",c(low1,low2)))
+          # print(paste("low1",c(low1,low2)))
           a = (low2-low1)/(r2-r1) # y=ax+b
           b = low2 - a*r2
           low = a*(r_i-r2)+low2
