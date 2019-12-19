@@ -99,11 +99,12 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
                 marks = as.factor(csd[[PhenoCol]]))
   if (plotter[1] == TRUE){
     png(filename = paste(sample_name,".png"))
-    par(mar=c(6,6,6,6)+0.1, mgp = c(5,1,0))
-    plot(csd_ppp, cols = Cols,
-                 main = paste("Location of cells and their phenotype in sample", sample_name), pch = 20)
+    par(mar = c(0,2,0,0)+0.1)
+    plot(csd_ppp, cols = Cols, xlab = "", ylab = "", main = "", pch = 20)
+    title(paste("Location of cells and their phenotype\n in sample", sample_name), line = -5)
     dev.off()
   }
+  
   
   quadratcount_pvalue = list()
 
@@ -114,12 +115,15 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
     
     if (plotter[2] == TRUE){
       png(filename = paste0(sample_name,"_quadratcounts_",phenotype,".png"))
-      par(mar=c(6,6,6,6)+0.1, mgp = c(5,1,0))
-      plot(splitted, main = paste("counts of", phenotype, "in sample", sample_name), cols = Cols,  pch = 20)
+      par(mar = c(0,2,0,0)+0.1)
+      # par(mar=c(6,6,6,6)+0.1, mgp = c(2,1,0))
+      plot(splitted, cols = Cols, xlab = "", ylab = "", main = "",  pch = 20)
       plot(quadratcount(splitted), add = TRUE)
+      title(paste("Counts of", phenotype, "in sample", sample_name), line = -5)
       dev.off()
       }
   }
+  
   
   
   # define all inbuild statistics
@@ -137,7 +141,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
   
   for (option in options){
     
-    if ((option == "K")|| (option == "L") || (option == "Kdot")|| (option == "Ldot") || (option == "pcf")){
+    if (option %in% c("K","L","Kdot","Ldot","pcf")){  # (option == "K")|| (option == "L") || (option == "Kdot")|| (option == "Ldot") || (option == "pcf")){
       all_types = alltypes(csd_ppp,fun = paste(option), dataname = sample_name, envelope = envelope_bool, correction = "iso")
     } else{
       all_types = alltypes(csd_ppp,fun = paste(option), dataname = sample_name, envelope = envelope_bool, correction = "km")
@@ -147,8 +151,20 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
     all_types_options_sample_name[[option]] = all_types
     
     if (plotter[3] == TRUE){
-      png(filename = paste0(sample_name,"_statistic_",option,".png"))
-      par(mar=c(6,6,6,6)+0.1, mgp = c(5,1,0))
+      if (option %in% c("G","J","K", "L","pcf")){ # (option == "K")|| (option == "L") || (option == "pcf")){
+        width = 800
+        height = 700
+        res = 80
+      } else{
+        width = 800
+        height = 900
+        res = 80
+      }
+        # par(mar = c(1,2,1,1)+0.1, oma = c())
+      # par(mar=c(10,10,10,10)+0.1, mgp = c(3,1,0))
+      # par(mar = c(5,4,4,2) + 0.1, oma = c(1,1,1,1))
+      png(filename = paste0(sample_name,"_statistic_",option,".png"),
+          width = width, height = height, res = res)
       plot(all_types)
       dev.off()
     }
@@ -160,6 +176,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
     normalized_list[[option]] = output[[3]]
     
   }
+  
   output_all = list()
   output_all[["pairwise_distance_filtered"]] = pairwise_distance_filtered
   output_all[["counts_sample"]] = counts_sample

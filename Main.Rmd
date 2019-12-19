@@ -80,8 +80,8 @@ samples_output = list()
 r_vec = c(20)
 # r_vec currently does not work well when given NULL see inside spatstat_vectra
 
-plotter_sample = TRUE
-plotter_quadrat = TRUE
+plotter_sample = FALSE
+plotter_quadrat = FALSE
 plotter_alltypes = TRUE
 
 plotter_bools = c(plotter_sample, plotter_quadrat, plotter_alltypes)
