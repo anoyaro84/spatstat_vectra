@@ -9,7 +9,7 @@ library(zoo)
 # phenotype can be converted by the "phenotype argument".
 # why statistics was used as argument?
 do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), 
-                       XposCol = 'Cell X Position', YposCol = 'Cell Y Position',
+                       fig.prefix = './', XposCol = 'Cell X Position', YposCol = 'Cell Y Position',
                        PhenoCol = 'Phenotype', sample_name = NULL, r_vec = NULL, envelope_bool = TRUE, ...) {
   
   csd <- Intable[, c(PhenoCol, XposCol, YposCol)]
@@ -98,7 +98,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
                               c(0, max(csd[[YposCol]]))),
                 marks = as.factor(csd[[PhenoCol]]))
   if (plotter[1] == TRUE){
-    png(filename = paste(sample_name,".png"))
+    png(filename = paste0(fig.prefix, sample_name,".png"))
     par(mar = c(0,2,0,0)+0.1)
     plot(csd_ppp, cols = Cols, xlab = "", ylab = "", main = "", pch = 20)
     title(paste("Location of cells and their phenotype\n in sample", sample_name), line = -5)
@@ -114,7 +114,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
     quadratcount_pvalue[[phenotype]] = quadrattest$p.value
     
     if (plotter[2] == TRUE){
-      png(filename = paste0(sample_name,"_quadratcounts_",phenotype,".png"))
+      png(filename = paste0(fig.prefix, sample_name,"_quadratcounts_",phenotype,".png"))
       par(mar = c(0,2,0,0)+0.1)
       # par(mar=c(6,6,6,6)+0.1, mgp = c(2,1,0))
       plot(splitted, cols = Cols, xlab = "", ylab = "", main = "",  pch = 20)
@@ -163,7 +163,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
         # par(mar = c(1,2,1,1)+0.1, oma = c())
       # par(mar=c(10,10,10,10)+0.1, mgp = c(3,1,0))
       # par(mar = c(5,4,4,2) + 0.1, oma = c(1,1,1,1))
-      png(filename = paste0(sample_name,"_statistic_",option,".png"),
+      png(filename = paste0(fig.prefix, sample_name,"_statistic_",option,".png"),
           width = width, height = height, res = res)
       plot(all_types)
       dev.off()
@@ -621,3 +621,64 @@ calculate_area_norm <- function (ripleys, option){
   
   return(c(AUC,Norm_max))
 }
+
+
+feature_extract <- function(outputs){
+	functions = c()
+	rs = c()
+	# get function names and rs
+	for (out in outputs) {
+		functions = union(functions, names(out$statistic_close_list))
+		rs = union(rs, names(out$statistic_close_list[[1]]))
+	}
+
+	# get feature names
+	feat_names = list()
+	for (func in functions) {
+		feat_names[[func]] = c()
+		for (out in outputs) {
+			feat_names[[func]] = union(feat_names[[func]],
+					apply(expand.grid(dimnames(out$all_types_options_sample_name[[func]]$which)), 
+					      1, function(x) gsub('/$', '', paste0(x, collapse='/')))
+				)
+		}
+	}
+
+	# create a matrix
+	allfeat = lapply(feat_names, function(x) expand.grid(rs, x))
+	allfeat = lapply(allfeat, function(x) {apply(x, 1, function(y) paste0(y, collapse='_'))})
+	allfeat_flat = c()
+	for (i in 1:length(allfeat)) {
+		allfeat_flat = c(allfeat_flat, paste0(names(allfeat)[[i]], '_', allfeat[[i]]),
+				 paste0('Normalized_',names(allfeat)[[i]], '_', allfeat[[i]])
+				 )
+	}
+
+
+	mat = matrix(NA, nrow = length(allfeat_flat), ncol = length(outputs),
+		     dimnames = list(sort(allfeat_flat), names(outputs)))
+
+	# fill matrix
+	for (i in 1:length(outputs)) {
+		out = outputs[[i]]
+		name = names(outputs)[i]
+		for (func in names(out$statistic_close_list)) {
+			df = melt(out$all_types_options_sample_name[[func]]$which)
+			df$featname = gsub("/NA$", "", paste0(df$Var1, "/", df$Var2))
+			for (r in rs) {
+				data = as.data.frame(t(as.data.frame(out$statistic_close_list[[func]][[r]])))
+				data$which = unlist(lapply(rownames(data), 
+						function(x) as.numeric(tail(strsplit(x, '.', fixed=T)[[1]],1))))
+				ind = match(data$which, df$value)
+				df$Ffeatname = paste0(func, '_', r, '_', df$featname)
+				df$measure = data$V1[ind]
+				df$Nmeasure = as.data.frame(t(as.data.frame(out$normalized_list[[func]][[r]])))$V1[ind]
+				mat[df$Ffeatname, name] = df$measure
+				mat[paste0('Normalized_', df$Ffeatname), name] = df$Nmeasure
+			}
+		}
+	}
+	return(mat)
+}
+
+
