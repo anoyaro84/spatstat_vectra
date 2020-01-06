@@ -10,7 +10,7 @@ library(zoo)
 # why statistics was used as argument?
 do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), 
                        fig.prefix = './', XposCol = 'Cell X Position', YposCol = 'Cell Y Position',
-                       PhenoCol = 'Phenotype', sample_name = NULL, r_vec = NULL, envelope_bool = TRUE, ...) {
+                       PhenoCol = 'Phenotype', sample_name = NULL, r_vec = NULL, options = NULL, envelope_bool = TRUE, ...) {
   
   csd <- Intable[, c(PhenoCol, XposCol, YposCol)]
   colnames(csd) = c('Phenotype', 'Cell X Position',  'Cell Y Position')
@@ -45,6 +45,20 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
     # r_vec currently does not work well when given NULL due to several automated settings for the grid of r in the settings of each option
     # ASSUMPTION
   }
+  
+  options_all = c("G","F", "J","Gdot", "Jdot", "K", "L", "pcf", "Kdot", "Ldot")
+  
+  
+  if (is.null(options)){
+      options = options_all
+  } else if (all(options %in% options_all)){
+      options = options
+  } else{
+      stop("one or more spatial statistic in parameter 'options' are not correctly defined")
+    }
+  
+  
+  
   
   
   # generate pairwise distance matrix for csd and filter csd on ""
@@ -97,8 +111,11 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
                 window = owin(c(0, max(csd[[XposCol]])),
                               c(0, max(csd[[YposCol]]))),
                 marks = as.factor(csd[[PhenoCol]]))
+  
+  
   if (plotter[1] == TRUE){
-    png(filename = paste0(fig.prefix, sample_name,".png"))
+    png(filename = paste0(file.path(fig.prefix, sample_name),".png"))
+    # png(filename = paste0(fig.prefix, sample_name,".png"))
     par(mar = c(0,2,0,0)+0.1)
     plot(csd_ppp, cols = Cols, xlab = "", ylab = "", main = "", pch = 20)
     title(paste("Location of cells and their phenotype\n in sample", sample_name), line = -5)
@@ -114,7 +131,8 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
     quadratcount_pvalue[[phenotype]] = quadrattest$p.value
     
     if (plotter[2] == TRUE){
-      png(filename = paste0(fig.prefix, sample_name,"_quadratcounts_",phenotype,".png"))
+      png(filename = paste0(file.path(fig.prefix, sample_name),"_quadratcounts_",phenotype,".png"))
+      # png(filename = paste0(fig.prefix, sample_name,"_quadratcounts_",phenotype,".png"))
       par(mar = c(0,2,0,0)+0.1)
       # par(mar=c(6,6,6,6)+0.1, mgp = c(2,1,0))
       plot(splitted, cols = Cols, xlab = "", ylab = "", main = "",  pch = 20)
@@ -126,9 +144,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
   
   
   
-  # define all inbuild statistics
-  options = c("G","F", "J","Gdot", "Jdot", "K", "L", "pcf", "Kdot", "Ldot")
-  # G and F are alreay in J.
+
   
   values_options = list()
   
@@ -160,11 +176,11 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
         height = 900
         res = 80
       }
-        # par(mar = c(1,2,1,1)+0.1, oma = c())
-      # par(mar=c(10,10,10,10)+0.1, mgp = c(3,1,0))
-      # par(mar = c(5,4,4,2) + 0.1, oma = c(1,1,1,1))
-      png(filename = paste0(fig.prefix, sample_name,"_statistic_",option,".png"),
-          width = width, height = height, res = res)
+        
+      png(filename = paste0(file.path(fig.prefix, sample_name),"_statistic_",option,".png"),
+            width = width, height = height, res = res)
+      # png(filename = paste0(fig.prefix, sample_name,"_statistic_",option,".png"),
+      #     width = width, height = height, res = res)
       plot(all_types)
       dev.off()
     }
