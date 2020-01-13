@@ -55,6 +55,7 @@ rownames(statistics) = pheno_vector_absolut
 ```{r RUN do analyse on all samples, echo = TRUE, eval = TRUE}
 # check for each image which pheotypes are missing for overview
 
+
 source("spatstat_vectra.R")
 
 
@@ -82,12 +83,12 @@ r_vec = c(20)
 
 plotter_sample = FALSE
 plotter_quadrat = FALSE
-plotter_alltypes = TRUE
+plotter_alltypes = FALSE
 
 plotter_bools = c(plotter_sample, plotter_quadrat, plotter_alltypes)
 
 
-for (samplename_long in paths[1:1]){
+for (samplename_long in paths[4:4]){
   # print(samplename_long)
   # samplename_long = "C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/HO105-194_[16067,37856]_cell_seg_data.txt" # PD-L1 positive cluster + Tumor cluster
   # print(samplename_long)
@@ -96,16 +97,28 @@ for (samplename_long in paths[1:1]){
   
   samplename = str_replace(samplename_long,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/","")
   samplename = str_replace(samplename,"_cell_seg_data.txt", "")
+  
 
-
-  # stop()
+  if (TRUE %in% plotter_bools){
+    output_dir <- file.path("fig", samplename)
+    
+    if (!dir.exists(output_dir)){
+      dir.create(output_dir)
+    } else {
+      print(paste("Directory",samplename, "already exists! Figures were overwritten."))
+    }
+  }
+  
+  
   data_with_distance = data %>%
     do(bind_cols(., find_nearest_distance(.)))
   paste("dimensions of the data with distances is", dim(data_with_distance)[1], "times", dim(data_with_distance)[2])
   
   
   
-  output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, envelope = TRUE)
+  output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = "G", envelope_bool = TRUE)
+  
+  # output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = './', XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = "G", envelope_bool = TRUE)
   
   samples_output[[samplename]] = output
   # stop()
@@ -167,7 +180,7 @@ samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis -
 samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
 samplename = samplename_path
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, envelope = TRUE)
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = "G", envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -183,7 +196,7 @@ samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis -
 samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
 samplename = samplename_path
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, envelope = TRUE)
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = "G", envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -198,7 +211,7 @@ samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis -
 samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
 samplename = samplename_path
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, envelope = TRUE)
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = "G", envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -237,7 +250,7 @@ samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis -
 samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
 samplename = samplename_path
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, envelope = TRUE)
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = "G", envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -253,7 +266,7 @@ samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis -
 samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
 samplename = samplename_path
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, envelope = TRUE)
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = "G", envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -269,7 +282,7 @@ samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis -
 samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
 samplename = samplename_path
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, envelope = TRUE)
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = "G", envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -285,7 +298,7 @@ samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis -
 samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
 samplename = samplename_path
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, envelope = TRUE)
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = "G", envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -301,7 +314,7 @@ samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis -
 samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
 samplename = samplename_path
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, envelope = TRUE)
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = "G", envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -337,7 +350,7 @@ samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis -
 samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
 samplename = samplename_path
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, envelope = TRUE)
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = "G", envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -373,7 +386,7 @@ samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis -
 samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
 samplename = samplename_path
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, envelope = TRUE)
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = "G", envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -409,7 +422,7 @@ samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis -
 samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
 samplename = samplename_path
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, envelope = TRUE)
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = "G", envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -445,7 +458,7 @@ samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis -
 samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
 samplename = samplename_path
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, envelope = TRUE)
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = "G", envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -482,7 +495,7 @@ samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis -
 samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
 samplename = samplename_path
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, envelope = TRUE)
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = "G", envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -498,7 +511,7 @@ samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis -
 samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
 samplename = samplename_path
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, envelope = TRUE)
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = "G", envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
