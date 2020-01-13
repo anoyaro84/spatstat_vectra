@@ -667,17 +667,24 @@ feature_extract <- function(outputs){
 			df$featname = gsub("/NA$", "", paste0(df$Var1, "/", df$Var2))
 			for (r in rs) {
 				data = as.data.frame(t(as.data.frame(out$statistic_close_list[[func]][[r]])))
-				data$which = unlist(lapply(rownames(data), 
+				if (nrow(data) > 0){
+					data$which = unlist(lapply(rownames(data), 
 						function(x) as.numeric(tail(strsplit(x, '.', fixed=T)[[1]],1))))
-				ind = match(data$which, df$value)
-				df$Ffeatname = paste0(func, '_', r, '_', df$featname)
-				df$measure = data$V1[ind]
-				df$Nmeasure = as.data.frame(t(as.data.frame(out$normalized_list[[func]][[r]])))$V1[ind]
-				mat[df$Ffeatname, name] = df$measure
-				mat[paste0('Normalized_', df$Ffeatname), name] = df$Nmeasure
+					#ind = match(data$which, df$value)
+					ind = match(df$value, data$which)
+					df$Ffeatname = paste0(func, '_', r, '_', df$featname)
+					df$measure = data$V1[ind]
+					df$Nmeasure = as.data.frame(t(as.data.frame(out$normalized_list[[func]][[r]])))$V1[ind]
+					mat[df$Ffeatname, name] = df$measure
+					mat[paste0('Normalized_', df$Ffeatname), name] = df$Nmeasure
+				}
 			}
 		}
 	}
+
+	# add more features (density, count, etc..)
+#	extra_features <- c('MED_min
+
 	return(mat)
 }
 
