@@ -87,16 +87,17 @@ plotter_alltypes = FALSE
 
 plotter_bools = c(plotter_sample, plotter_quadrat, plotter_alltypes)
 
+selected_options = NULL
 
-for (samplename_long in paths[4:4]){
+for (samplename_long in paths[1:1]){
   # print(samplename_long)
   # samplename_long = "C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/HO105-194_[16067,37856]_cell_seg_data.txt" # PD-L1 positive cluster + Tumor cluster
   # print(samplename_long)
   # print(paste("path of data is ", samplename))
   data = purrr::map_df(samplename_long, read_cell_seg_data, pixels_per_micron = getOption("phenoptr.pixels.per.micron"))
   
-  samplename = str_replace(samplename_long,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/","")
-  samplename = str_replace(samplename,"_cell_seg_data.txt", "")
+  samplename = str_remove(samplename_long,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/")
+  samplename = str_remove(samplename,"_cell_seg_data.txt")
   
 
   if (TRUE %in% plotter_bools){
@@ -116,9 +117,9 @@ for (samplename_long in paths[4:4]){
   
   
   
-  output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = "G", envelope_bool = TRUE)
+  output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
   
-  # output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = './', XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = "G", envelope_bool = TRUE)
+  # output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = './', XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
   
   samples_output[[samplename]] = output
   # stop()
@@ -161,7 +162,16 @@ colors_absolut = c("magenta", "brown", "red", "blue", "green", "yellow", "gray",
 names(colors_absolut) = pheno_vector_absolut
 
 
-r_vec = c(10,20)
+r_vec = c(20)
+# r_vec currently does not work well when given NULL see inside spatstat_vectra
+
+plotter_sample = TRUE
+plotter_quadrat = TRUE
+plotter_alltypes = FALSE
+
+plotter_bools = c(plotter_sample, plotter_quadrat, plotter_alltypes)
+
+selected_options = c("pcf","K")
 
 # run for one sample name
 
@@ -176,11 +186,20 @@ data = purrr::map_df(samplename_path, read_cell_seg_data, pixels_per_micron = ge
 data_with_distance = data %>%
   do(bind_cols(., find_nearest_distance(.)))
 
-samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/","")
-samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
-samplename = samplename_path
+samplename = str_remove(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/")
+samplename = str_remove(samplename,"_cell_seg_data.txt")
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = "G", envelope_bool = TRUE)
+if (TRUE %in% plotter_bools){
+  output_dir <- file.path("fig", samplename)
+  
+  if (!dir.exists(output_dir)){
+    dir.create(output_dir)
+  } else {
+    print(paste("Directory",samplename, "already exists! Figures were overwritten."))
+  }
+}
+
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -192,11 +211,20 @@ data = purrr::map_df(samplename_path, read_cell_seg_data, pixels_per_micron = ge
 data_with_distance = data %>%
   do(bind_cols(., find_nearest_distance(.)))
 
-samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/","")
-samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
-samplename = samplename_path
+samplename = str_remove(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/")
+samplename = str_remove(samplename,"_cell_seg_data.txt")
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = "G", envelope_bool = TRUE)
+if (TRUE %in% plotter_bools){
+  output_dir <- file.path("fig", samplename)
+  
+  if (!dir.exists(output_dir)){
+    dir.create(output_dir)
+  } else {
+    print(paste("Directory",samplename, "already exists! Figures were overwritten."))
+  }
+}
+
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -207,11 +235,20 @@ data = purrr::map_df(samplename_path, read_cell_seg_data, pixels_per_micron = ge
 data_with_distance = data %>%
   do(bind_cols(., find_nearest_distance(.)))
 
-samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/","")
-samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
-samplename = samplename_path
+samplename = str_remove(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/")
+samplename = str_remove(samplename,"_cell_seg_data.txt")
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = "G", envelope_bool = TRUE)
+if (TRUE %in% plotter_bools){
+  output_dir <- file.path("fig", samplename)
+  
+  if (!dir.exists(output_dir)){
+    dir.create(output_dir)
+  } else {
+    print(paste("Directory",samplename, "already exists! Figures were overwritten."))
+  }
+}
+
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -230,7 +267,16 @@ colors_absolut = c("magenta", "brown", "red", "blue", "green", "yellow", "gray",
 names(colors_absolut) = pheno_vector_absolut
 
 
-r_vec = c(10)
+r_vec = c(20)
+# r_vec currently does not work well when given NULL see inside spatstat_vectra
+
+plotter_sample = TRUE
+plotter_quadrat = TRUE
+plotter_alltypes = FALSE
+
+plotter_bools = c(plotter_sample, plotter_quadrat, plotter_alltypes)
+
+selected_options = NULL
 
 # run for one sample name
 
@@ -246,11 +292,20 @@ data = purrr::map_df(samplename_path, read_cell_seg_data, pixels_per_micron = ge
 data_with_distance = data %>%
   do(bind_cols(., find_nearest_distance(.)))
 
-samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/","")
-samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
-samplename = samplename_path
+samplename = str_remove(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/")
+samplename = str_remove(samplename,"_cell_seg_data.txt")
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = "G", envelope_bool = TRUE)
+if (TRUE %in% plotter_bools){
+  output_dir <- file.path("fig", samplename)
+  
+  if (!dir.exists(output_dir)){
+    dir.create(output_dir)
+  } else {
+    print(paste("Directory",samplename, "already exists! Figures were overwritten."))
+  }
+}
+
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -262,11 +317,20 @@ data = purrr::map_df(samplename_path, read_cell_seg_data, pixels_per_micron = ge
 data_with_distance = data %>%
   do(bind_cols(., find_nearest_distance(.)))
 
-samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/","")
-samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
-samplename = samplename_path
+samplename = str_remove(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/")
+samplename = str_remove(samplename,"_cell_seg_data.txt")
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = "G", envelope_bool = TRUE)
+if (TRUE %in% plotter_bools){
+  output_dir <- file.path("fig", samplename)
+  
+  if (!dir.exists(output_dir)){
+    dir.create(output_dir)
+  } else {
+    print(paste("Directory",samplename, "already exists! Figures were overwritten."))
+  }
+}
+
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -278,11 +342,20 @@ data = purrr::map_df(samplename_path, read_cell_seg_data, pixels_per_micron = ge
 data_with_distance = data %>%
   do(bind_cols(., find_nearest_distance(.)))
 
-samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/","")
-samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
-samplename = samplename_path
+samplename = str_remove(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/")
+samplename = str_remove(samplename,"_cell_seg_data.txt")
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = "G", envelope_bool = TRUE)
+if (TRUE %in% plotter_bools){
+  output_dir <- file.path("fig", samplename)
+  
+  if (!dir.exists(output_dir)){
+    dir.create(output_dir)
+  } else {
+    print(paste("Directory",samplename, "already exists! Figures were overwritten."))
+  }
+}
+
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -294,11 +367,20 @@ data = purrr::map_df(samplename_path, read_cell_seg_data, pixels_per_micron = ge
 data_with_distance = data %>%
   do(bind_cols(., find_nearest_distance(.)))
 
-samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/","")
-samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
-samplename = samplename_path
+samplename = str_remove(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/")
+samplename = str_remove(samplename,"_cell_seg_data.txt")
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = "G", envelope_bool = TRUE)
+if (TRUE %in% plotter_bools){
+  output_dir <- file.path("fig", samplename)
+  
+  if (!dir.exists(output_dir)){
+    dir.create(output_dir)
+  } else {
+    print(paste("Directory",samplename, "already exists! Figures were overwritten."))
+  }
+}
+
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -310,11 +392,20 @@ data = purrr::map_df(samplename_path, read_cell_seg_data, pixels_per_micron = ge
 data_with_distance = data %>%
   do(bind_cols(., find_nearest_distance(.)))
 
-samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/","")
-samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
-samplename = samplename_path
+samplename = str_remove(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/")
+samplename = str_remove(samplename,"_cell_seg_data.txt")
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = "G", envelope_bool = TRUE)
+if (TRUE %in% plotter_bools){
+  output_dir <- file.path("fig", samplename)
+  
+  if (!dir.exists(output_dir)){
+    dir.create(output_dir)
+  } else {
+    print(paste("Directory",samplename, "already exists! Figures were overwritten."))
+  }
+}
+
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -333,7 +424,16 @@ colors_absolut = c("magenta", "brown", "red", "blue", "green", "yellow", "gray",
 names(colors_absolut) = pheno_vector_absolut
 
 
-r_vec = c(10,20)
+r_vec = c(20)
+# r_vec currently does not work well when given NULL see inside spatstat_vectra
+
+plotter_sample = TRUE
+plotter_quadrat = TRUE
+plotter_alltypes = TRUE
+
+plotter_bools = c(plotter_sample, plotter_quadrat, plotter_alltypes)
+
+selected_options = NULL
 
 # run for one sample name
 
@@ -346,11 +446,20 @@ data = purrr::map_df(samplename_path, read_cell_seg_data, pixels_per_micron = ge
 data_with_distance = data %>%
   do(bind_cols(., find_nearest_distance(.)))
 
-samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/","")
-samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
-samplename = samplename_path
+samplename = str_remove(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/")
+samplename = str_remove(samplename,"_cell_seg_data.txt")
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = "G", envelope_bool = TRUE)
+if (TRUE %in% plotter_bools){
+  output_dir <- file.path("fig", samplename)
+  
+  if (!dir.exists(output_dir)){
+    dir.create(output_dir)
+  } else {
+    print(paste("Directory",samplename, "already exists! Figures were overwritten."))
+  }
+}
+
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -369,7 +478,16 @@ colors_absolut = c("magenta", "brown", "red", "blue", "green", "yellow", "gray",
 names(colors_absolut) = pheno_vector_absolut
 
 
-r_vec = c(10)
+r_vec = c(20)
+# r_vec currently does not work well when given NULL see inside spatstat_vectra
+
+plotter_sample = TRUE
+plotter_quadrat = TRUE
+plotter_alltypes = FALSE
+
+plotter_bools = c(plotter_sample, plotter_quadrat, plotter_alltypes)
+
+selected_options = NULL
 
 # run for one sample name
 
@@ -382,11 +500,20 @@ data = purrr::map_df(samplename_path, read_cell_seg_data, pixels_per_micron = ge
 data_with_distance = data %>%
   do(bind_cols(., find_nearest_distance(.)))
 
-samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/","")
-samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
-samplename = samplename_path
+samplename = str_remove(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/")
+samplename = str_remove(samplename,"_cell_seg_data.txt")
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = "G", envelope_bool = TRUE)
+if (TRUE %in% plotter_bools){
+  output_dir <- file.path("fig", samplename)
+  
+  if (!dir.exists(output_dir)){
+    dir.create(output_dir)
+  } else {
+    print(paste("Directory",samplename, "already exists! Figures were overwritten."))
+  }
+}
+
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -406,7 +533,14 @@ colors_absolut = c("magenta", "brown", "red", "blue", "green", "yellow", "gray",
 names(colors_absolut) = pheno_vector_absolut
 
 
-r_vec = c(10,20)
+r_vec = c(20)
+# r_vec currently does not work well when given NULL see inside spatstat_vectra
+
+plotter_sample = TRUE
+plotter_quadrat = TRUE
+plotter_alltypes = FALSE
+
+plotter_bools = c(plotter_sample, plotter_quadrat, plotter_alltypes)
 
 # run for one sample name
 
@@ -418,11 +552,20 @@ data = purrr::map_df(samplename_path, read_cell_seg_data, pixels_per_micron = ge
 data_with_distance = data %>%
   do(bind_cols(., find_nearest_distance(.)))
 
-samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/","")
-samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
-samplename = samplename_path
+samplename = str_remove(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/")
+samplename = str_remove(samplename,"_cell_seg_data.txt")
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = "G", envelope_bool = TRUE)
+if (TRUE %in% plotter_bools){
+  output_dir <- file.path("fig", samplename)
+  
+  if (!dir.exists(output_dir)){
+    dir.create(output_dir)
+  } else {
+    print(paste("Directory",samplename, "already exists! Figures were overwritten."))
+  }
+}
+
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -440,9 +583,18 @@ pheno_vector_absolut = c("CD163+PDL1-","CD163+PDL1+","CD3+CD8-PD1-", "CD3+CD8-PD
 
 colors_absolut = c("magenta", "brown", "red", "blue", "green", "yellow", "gray", "pink", "orange", "cyan")
 names(colors_absolut) = pheno_vector_absolut
+print(colors_absolut)
 
+r_vec = c(20)
+# r_vec currently does not work well when given NULL see inside spatstat_vectra
 
-r_vec = c(10)
+plotter_sample = TRUE
+plotter_quadrat = TRUE
+plotter_alltypes = FALSE
+
+plotter_bools = c(plotter_sample, plotter_quadrat, plotter_alltypes)
+
+selected_options = NULL
 
 # run for one sample name
 
@@ -454,11 +606,20 @@ data = purrr::map_df(samplename_path, read_cell_seg_data, pixels_per_micron = ge
 data_with_distance = data %>%
   do(bind_cols(., find_nearest_distance(.)))
 
-samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/","")
-samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
-samplename = samplename_path
+samplename = str_remove(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/")
+samplename = str_remove(samplename,"_cell_seg_data.txt")
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = "G", envelope_bool = TRUE)
+if (TRUE %in% plotter_bools){
+  output_dir <- file.path("fig", samplename)
+  print(output_dir)
+  if (!dir.exists(output_dir)){
+    dir.create(output_dir)
+  } else {
+    print(paste("Directory",samplename, "already exists! Figures were overwritten."))
+  }
+}
+
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -477,8 +638,16 @@ pheno_vector_absolut = c("CD163+PDL1-","CD163+PDL1+","CD3+CD8-PD1-", "CD3+CD8-PD
 colors_absolut = c("magenta", "brown", "red", "blue", "green", "yellow", "gray", "pink", "orange", "cyan")
 names(colors_absolut) = pheno_vector_absolut
 
+r_vec = c(20)
+# r_vec currently does not work well when given NULL see inside spatstat_vectra
 
-r_vec = c(10,20)
+plotter_sample = TRUE
+plotter_quadrat = TRUE
+plotter_alltypes = TRUE
+
+plotter_bools = c(plotter_sample, plotter_quadrat, plotter_alltypes)
+
+selected_options = "K"
 
 # run for one sample name
 
@@ -491,11 +660,20 @@ data = purrr::map_df(samplename_path, read_cell_seg_data, pixels_per_micron = ge
 data_with_distance = data %>%
   do(bind_cols(., find_nearest_distance(.)))
 
-samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/","")
-samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
-samplename = samplename_path
+samplename = str_remove(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/")
+samplename = str_remove(samplename,"_cell_seg_data.txt")
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = "G", envelope_bool = TRUE)
+if (TRUE %in% plotter_bools){
+  output_dir <- file.path("fig", samplename)
+  
+  if (!dir.exists(output_dir)){
+    dir.create(output_dir)
+  } else {
+    print(paste("Directory",samplename, "already exists! Figures were overwritten."))
+  }
+}
+
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -507,11 +685,10 @@ data = purrr::map_df(samplename_path, read_cell_seg_data, pixels_per_micron = ge
 data_with_distance = data %>%
   do(bind_cols(., find_nearest_distance(.)))
 
-samplename_path = str_replace(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/","")
-samplename_path = str_replace(samplename_path,"_cell_seg_data.txt", "")
-samplename = samplename_path
+samplename = str_remove(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/")
+samplename = str_remove(samplename,"_cell_seg_data.txt")
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = "G", envelope_bool = TRUE)
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
