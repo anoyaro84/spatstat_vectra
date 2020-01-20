@@ -15,7 +15,8 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
     csd <- Intable[, c(PhenoCol, XposCol, YposCol)]
     colnames(csd) = c('Phenotype', 'Cell X Position',  'Cell Y Position')
     pheno_vector = unique(csd$Phenotype)
-    print(pheno_vector)
+    
+    
     
     if (is.null(sample_name)) {
       sample_name = 'Input sample'
@@ -28,9 +29,10 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
     if (is.element("",pheno_vector)){
         pheno_vector = pheno_vector[pheno_vector != ""]
     }
-    pheno_vector = pheno_vector[order(match(pheno_vector,PhenoOrder))]
     
-    # print(pheno_vector)
+    # pheno_vector = pheno_vector[order(match(pheno_vector,PhenoOrder))]
+    
+    
     
     # Replace phenotype label by definition
     if (!is.null(phenotype)) {
@@ -38,7 +40,8 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
           csd$Phenotype[[pheno]] = phenotype[[pheno]]
         }
     }
-  
+    
+    
     if (is.null(r_vec)){
         dim_scale = min(max(csd[[XposCol]], max(csd[[YposCol]])))
         r_vec = dim_scale*c(0.1,0.9)
@@ -92,13 +95,6 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
     # rownames(statistics) = PhenoOrder
     
     
-    # Replace "+" with "T" and "-" with "F" in phenotype vector and in the csd for correct functioning of extracting inbuild statistics.
-    pheno_vector = str_replace_all(pheno_vector,"[+]","T")
-    pheno_vector = str_replace_all(pheno_vector,"[-]","F")
-    
-    
-    csd$Phenotype = str_replace_all(csd$Phenotype,"[+]","T")
-    csd$Phenotype = str_replace_all(csd$Phenotype,"[-]","F")
     
     n = length(pheno_vector)  
     
@@ -108,11 +104,14 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
                   window = owin(c(0, max(csd[[XposCol]])), c(0, max(csd[[YposCol]]))), 
                   marks = as.factor(csd[[PhenoCol]]))
     
+    
+    
+    
     if (plotter[1] == TRUE){
         png(filename = paste0(file.path(fig.prefix, sample_name),".png"))
         # png(filename = paste0(fig.prefix, sample_name,".png"))
         par(mar = c(0,2,0,0)+0.1)
-        plot(csd_ppp, cols = Cols, xlab = "", ylab = "", main = "", pch = 20)
+        plot(csd_ppp, cols = Cols[levels(marks(csd_ppp))], xlab = "", ylab = "", main = "", pch = 20)
         title(paste("Location of cells and their phenotype\n in sample", sample_name), line = -5)
         dev.off()
     }
@@ -130,12 +129,26 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
             # png(filename = paste0(fig.prefix, sample_name,"_quadratcounts_",phenotype,".png"))
             par(mar = c(0,2,0,0)+0.1)
             # par(mar=c(6,6,6,6)+0.1, mgp = c(2,1,0))
-            plot(splitted, cols = Cols, xlab = "", ylab = "", main = "",  pch = 20)
+            plot(splitted, cols = Cols[levels(marks(csd_ppp))], xlab = "", ylab = "", main = "",  pch = 20)
             plot(quadratcount(splitted), add = TRUE)
             title(paste("Counts of", phenotype, "in sample", sample_name), line = -5)
             dev.off()
         }
     }
+    
+    
+    # Replace "+" with "T" and "-" with "F" in phenotype vector and in the csd for correct functioning of extracting inbuild statistics.
+    
+    pheno_vector = str_replace_all(pheno_vector,"[+]","T")
+    pheno_vector = str_replace_all(pheno_vector,"[-]","F")
+    
+    
+    csd$Phenotype = str_replace_all(csd$Phenotype,"[+]","T")
+    csd$Phenotype = str_replace_all(csd$Phenotype,"[-]","F")
+    
+    csd_ppp = ppp(x=csd[[XposCol]], y=csd[[YposCol]], 
+                  window = owin(c(0, max(csd[[XposCol]])), c(0, max(csd[[YposCol]]))), 
+                  marks = as.factor(csd[[PhenoCol]]))
     
     
     values_options = list()
