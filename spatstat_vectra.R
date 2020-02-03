@@ -15,8 +15,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
     csd <- Intable[, c(PhenoCol, XposCol, YposCol)]
     colnames(csd) = c('Phenotype', 'Cell X Position',  'Cell Y Position')
     pheno_vector = unique(csd$Phenotype)
-    
-    
+
     
     if (is.null(sample_name)) {
       sample_name = 'Input sample'
@@ -27,20 +26,20 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
     }
     
     if (is.element("",pheno_vector)){
+        
         pheno_vector = pheno_vector[pheno_vector != ""]
     }
     
     # pheno_vector = pheno_vector[order(match(pheno_vector,PhenoOrder))]
     
     
-    
     # Replace phenotype label by definition
     if (!is.null(phenotype)) {
-        for(pheno in names(phenotype)) {
-          csd$Phenotype[[pheno]] = phenotype[[pheno]]
+        for(pheno in phenotype) {
+            csd$Phenotype[csd$Phenotype == pheno] = names(phenotype[phenotype == pheno])
         }
     }
-    
+    view(csd)
     
     if (is.null(r_vec)){
         dim_scale = min(max(csd[[XposCol]], max(csd[[YposCol]])))

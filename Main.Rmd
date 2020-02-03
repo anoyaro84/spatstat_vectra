@@ -61,10 +61,17 @@ source("spatstat_vectra.R")
 
 # colors according to slides Marit and plot conventions
 pheno_vector_absolut = c("CD163+PDL1-","CD163+PDL1+","CD3+CD8-PD1-", "CD3+CD8-PD1+", "CD3+CD8+PD1-", "CD3+CD8+PD1+","Other","Other PDL1+","PAX5+PDL1-", "PAX5+PDL1+")
+pheno_vector_absolut1 = c("CD163+PDL1-","CD163+PDL1+","CD3+CD8-PD1-", "CD3+CD8-PD1+", "CD3+CD8+PD1-", "CD3+CD8+PD1+","Other","Other PDL1+","PAX5+PDL1-", "PAX5+PDL1+", "")
+names(pheno_vector_absolut1) = pheno_vector_separation
 
 colors_absolut = c("magenta", "brown", "red", "blue", "green", "yellow", "gray", "pink", "orange", "cyan")
 names(colors_absolut) = pheno_vector_absolut
 
+pheno_vector_separation = c("Macrophage", "Macrophage", "T-cells", "T-cells", "T-cells", "T-cells", "Other", "Other", "Tumor", "Tumor", "Other")
+
+
+colors_absolut_separation = c("magenta", "magenta", "red", "red", "red", "red", "gray", "gray", "orange", "orange", "gray")
+names(colors_absolut_separation) = pheno_vector_separation
 
 # run for one sample name
 
@@ -115,9 +122,9 @@ for (samplename_long in paths[1:1]){
     do(bind_cols(., find_nearest_distance(.)))
   paste("dimensions of the data with distances is", dim(data_with_distance)[1], "times", dim(data_with_distance)[2])
   
+  print("hi")
   
-  
-  output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
+  output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = pheno_vector_absolut1, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
   
   # output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = './', XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
   
