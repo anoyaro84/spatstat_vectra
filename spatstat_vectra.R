@@ -174,15 +174,13 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL, phenotype =
                   marks = as.factor(csd[[PhenoCol]]))
     
     
-    print(colors_phenotype[levels(marks(csd_ppp))])
+    
+    # print(colors_phenotype)
+    # print(colors_phenotype[levels(marks(csd_ppp))])
+    
     
     if (plotter[1] == TRUE) {
-        # print(output_dir)
-        # print(fig.prefix)
-        # print(sample_name)
-        # print(paste0(file.path(fig.prefix, sample_name),".png"))
         png(filename = paste0(file.path(output_dir, sample_name),".png"))
-        # png(filename = paste0(fig.prefix, sample_name,".png"))
         par(mar = c(0,2,0,0)+0.1)
         plot(csd_ppp, cols = colors_phenotype[levels(marks(csd_ppp))], xlab = "", ylab = "", main = "", pch = 20)
         title(paste("Location of cells and their phenotype\n in sample", sample_name), line = -5)
@@ -193,14 +191,14 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL, phenotype =
     quadratcount_pvalue = list()
     
     for (phenotype in pheno_vector){
-        # print(phenotype)
+        
         splitted = csd_ppp[marks(csd_ppp) == phenotype]
+        
         quadrattest = quadrat.test(splitted)
         quadratcount_pvalue[[phenotype]] = quadrattest$p.value
         
         if (plotter[2] == TRUE){
             png(filename = paste0(file.path(output_dir, sample_name),"_quadratcounts_",phenotype,".png"))
-            # png(filename = paste0(fig.prefix, sample_name,"_quadratcounts_",phenotype,".png"))
             par(mar = c(0,2,0,0)+0.1)
             # par(mar=c(6,6,6,6)+0.1, mgp = c(2,1,0))
             plot(splitted, cols = colors_phenotype[levels(marks(csd_ppp))], xlab = "", ylab = "", main = "",  pch = 20)
@@ -260,8 +258,6 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL, phenotype =
             
             png(filename = paste0(file.path(output_dir, sample_name),"_statistic_",option,".png"),
                 width = width, height = height, res = res)
-            # png(filename = paste0(fig.prefix, sample_name,"_statistic_",option,".png"),
-            #     width = width, height = height, res = res)
             plot(all_types)
             dev.off()
         }

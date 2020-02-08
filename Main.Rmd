@@ -68,7 +68,7 @@ rownames(statistics) = pheno_vector_absolut
 source("spatstat_vectra.R")
 
 
-# colors according to slides Marit and plot conventions
+# colors according to slides Marit and plot conventions - COMPLETE PHENOTYPING
 pheno_vector_absolut = c("CD163+PDL1-","CD163+PDL1+","CD3+CD8-PD1-", "CD3+CD8-PD1+", "CD3+CD8+PD1-", "CD3+CD8+PD1+","Other","Other PDL1+","PAX5+PDL1-", "PAX5+PDL1+", "")
 
 colors_absolut = c("magenta", "brown", "red", "blue", "green", "yellow", "gray", "pink", "orange", "cyan", "gray")
@@ -77,13 +77,13 @@ names(colors_absolut) = pheno_vector_absolut
 pheno_vector_separation = NULL
 colors_absolut_separation = NULL
 
-# convention to thresholding data
+# convention to thresholding data - COMMENT LINES 82 TO 86 FOR COMPLETE PHENOTYPING
 
-# pheno_vector_separation = c("Macrophage", "Macrophage", "T cells", "T cells", "T cells", "T cells", "Other", "Other", "Tumor", "Tumor", "Other")
-# names(pheno_vector_absolut) = pheno_vector_separation
-# 
-# colors_absolut_separation = c("magenta", "magenta", "red", "red", "red", "red", "gray", "gray", "orange", "orange", "gray")
-# names(colors_absolut_separation) = pheno_vector_separation
+pheno_vector_separation = c("Macrophage", "Macrophage", "T cells", "T cells", "T cells", "T cells", "Other", "Other", "Tumor", "Tumor", "Other")
+names(pheno_vector_absolut) = pheno_vector_separation
+
+colors_absolut_separation = c("magenta", "magenta", "red", "red", "red", "red", "gray", "gray", "orange", "orange", "gray")
+names(colors_absolut_separation) = pheno_vector_separation
 
 
 # run for one sample name
@@ -109,7 +109,7 @@ plotter_bools = c(plotter_sample, plotter_quadrat, plotter_alltypes)
 
 selected_options = NULL
 
-for (samplename_long in paths[1:1]){
+for (samplename_long in paths[5]){
 
   data = purrr::map_df(samplename_long, read_cell_seg_data, pixels_per_micron = getOption("phenoptr.pixels.per.micron"))
   
