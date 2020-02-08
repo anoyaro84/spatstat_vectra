@@ -8,38 +8,94 @@ library(zoo)
 
 # phenotype can be converted by the "phenotype argument".
 # why statistics was used as argument?
-do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), 
-                       fig.prefix = './', XposCol = 'Cell X Position', YposCol = 'Cell Y Position',
+do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL, phenotype = NULL, colors_phenotype = NULL, plotter = c(FALSE,FALSE,FALSE), 
+                       fig.prefix = '.', XposCol = 'Cell X Position', YposCol = 'Cell Y Position',
                        PhenoCol = 'Phenotype', sample_name = NULL, r_vec = NULL, options = NULL, envelope_bool = TRUE, ...) {
+    
+    
+    
+    # view(Intable)
     
     csd <- Intable[, c(PhenoCol, XposCol, YposCol)]
     colnames(csd) = c('Phenotype', 'Cell X Position',  'Cell Y Position')
-    pheno_vector = unique(csd$Phenotype)
-
+    # print("in the function")
     
     if (is.null(sample_name)) {
       sample_name = 'Input sample'
     }
     
+    pheno_vector = unique(csd$Phenotype)
+    # print(length(Intable$Phenotype[Intable$Phenotype == ""]))
+    # print(length(csd$Phenotype[csd$Phenotype == ""]))
+    # Replace unidentified "" with "Other" phenotype if applicable
+
+    
+    
     if (is.null(PhenoOrder)) {
         PhenoOrder = pheno_vector # if no order is set, just take the order from data
+        # ColsOrder = ColsOrder[order(match(ColsOrder,pheno_vector))] # order ColsOrder the same as pheno_vector
+        # pheno_vector = pheno_vector[order(match(pheno_vector,PhenoOrder))]
     }
     
-    if (is.element("",pheno_vector)){
+    # view(csd)
+    # stop("pre")
+    # Replace phenotype label by definition and color by definition
+    
+    
+    if (is.null(phenotype) & is.null(colors_phenotype)){
+        # print("HI")
+        # print(PhenoOrder)
+        # print(ColsOrder)
         
+        phenotype = PhenoOrder
+        colors_phenotype = ColsOrder
+        
+        
+        csd$Phenotype[csd$Phenotype == ""] = "Other"
+        Intable$Phenotype[Intable$Phenotype == ""] = "Other"
         pheno_vector = pheno_vector[pheno_vector != ""]
-    }
-    
-    # pheno_vector = pheno_vector[order(match(pheno_vector,PhenoOrder))]
-    
-    
-    # Replace phenotype label by definition
-    if (!is.null(phenotype)) {
-        for(pheno in phenotype) {
-            csd$Phenotype[csd$Phenotype == pheno] = names(phenotype[phenotype == pheno])
+        
+        
+        if (TRUE %in% plotter){
+            output_dir <- file.path(fig.prefix,"fig","Complete Phenotype", sample_name)
+            
+            if (!dir.exists(output_dir)){
+                dir.create(output_dir)
+            } else {
+                print(paste("Directory for Complete Phenotype and", samplename, "already exists! Figures were overwritten."))
+            }
         }
+    } else if (!is.null(phenotype) & !is.null(colors_phenotype)) {
+        # convention to thresholding data
+        
+        for(pheno in pheno_vector) {
+            csd$Phenotype[csd$Phenotype == pheno] = names(PhenoOrder[PhenoOrder == pheno])
+            Intable$Phenotype[Intable$Phenotype == pheno] = names(PhenoOrder[PhenoOrder == pheno])
+        }
+        pheno_vector = unique(csd$Phenotype)
+        
+        if (TRUE %in% plotter_bools){
+            output_dir <- file.path(fig.prefix,"fig","Threshold Phenotype", samplename)
+            
+            if (!dir.exists(output_dir)){
+                dir.create(output_dir)
+            } else {
+                print(paste("Directory for Threshold Phenotype and", samplename, "already exists! Figures were overwritten."))
+            }
+        }
+    } else {
+        stop("incorrect input for phenotype and colors_phenotype in do_analyse")
     }
-    view(csd)
+    
+    
+    
+    # if (is.element("",pheno_vector)){
+    #     csd$Phenotype[csd$Phenotype == ""] = "Other"
+    #     Intable$Phenotype[Intable$Phenotype == ""] = "Other"
+    #     pheno_vector = pheno_vector[pheno_vector != ""]
+    # }
+    
+    
     
     if (is.null(r_vec)){
         dim_scale = min(max(csd[[XposCol]], max(csd[[YposCol]])))
@@ -48,9 +104,11 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
         # ASSUMPTION
     }
     
+    
+    
     options_all = c("G","F", "J","Gdot", "Jdot", "K", "L", "pcf", "Kdot", "Ldot")
     
-
+    
     if (is.null(options)){
         options = options_all
     } else if (all(options %in% options_all)){
@@ -61,22 +119,34 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
     
     
     # generate pairwise distance matrix for csd and filter csd on ""
+    
+    
+    
+    
     pairwise_distance_all = distance_matrix(csd)
+    pairwise_distance_filtered = pairwise_distance_all
+    # rows = select_rows(csd,pheno_vector)
+    # pairwise_distance_filtered = pairwise_distance_all[rows,]
+    # csd <- csd[rows, ]
     
-    rows = select_rows(csd,pheno_vector)
-    pairwise_distance_filtered = pairwise_distance_all[rows,]
-    csd <- csd[rows, ]
-    
-    
+    # print(unique(Intable$Phenotype))
+    # print(pheno_vector)
+    # stop("inside")
     # normal statistics: MAD and MED
-    # uses Intable as it needs the minimal distances in the table and their ID's
     
-    output = getMAD(Intable, pairwise_distance_all, pheno_vector)
+    # Create Intable with nearest distances for each phenotype
+    Intable_with_distance = Intable %>%
+        do(bind_cols(., find_nearest_distance(.)))
+    paste("dimensions of the data with distances is", dim(Intable_with_distance)[1], "times", dim(Intable_with_distance)[2])
+    
+    # view(Intable_with_distance)
+    # stop("intable with distance")
+    output = getMAD(Intable_with_distance, pairwise_distance_all, pheno_vector)
     MED_min = output[[1]]
     MED = output[[2]]
     MAD_min = output[[3]]
     MAD = output[[4]]
-    
+    # stop("afterMAD")
     # normal statistics: Counts and Density
     Area_sample = max(csd[[XposCol]])*max(csd[[YposCol]])
     output = getDensity(csd, pheno_vector, Area_sample)
@@ -93,24 +163,28 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
     # colnames(statistics) = c(paste("Area K", PhenoOrder),"Area Kdot", paste("Maxnorm K", PhenoOrder), "Maxnorm Kdot")
     # rownames(statistics) = PhenoOrder
     
-    
-    
+    # stop("csd")
+    # view(csd)
     n = length(pheno_vector)  
     
-    
-    
+    # view(csd)
+    # stop("csd")
     csd_ppp = ppp(x=csd[[XposCol]], y=csd[[YposCol]], 
                   window = owin(c(0, max(csd[[XposCol]])), c(0, max(csd[[YposCol]]))), 
                   marks = as.factor(csd[[PhenoCol]]))
     
     
+    print(colors_phenotype[levels(marks(csd_ppp))])
     
-    
-    if (plotter[1] == TRUE){
-        png(filename = paste0(file.path(fig.prefix, sample_name),".png"))
+    if (plotter[1] == TRUE) {
+        # print(output_dir)
+        # print(fig.prefix)
+        # print(sample_name)
+        # print(paste0(file.path(fig.prefix, sample_name),".png"))
+        png(filename = paste0(file.path(output_dir, sample_name),".png"))
         # png(filename = paste0(fig.prefix, sample_name,".png"))
         par(mar = c(0,2,0,0)+0.1)
-        plot(csd_ppp, cols = Cols[levels(marks(csd_ppp))], xlab = "", ylab = "", main = "", pch = 20)
+        plot(csd_ppp, cols = colors_phenotype[levels(marks(csd_ppp))], xlab = "", ylab = "", main = "", pch = 20)
         title(paste("Location of cells and their phenotype\n in sample", sample_name), line = -5)
         dev.off()
     }
@@ -119,16 +193,17 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
     quadratcount_pvalue = list()
     
     for (phenotype in pheno_vector){
+        # print(phenotype)
         splitted = csd_ppp[marks(csd_ppp) == phenotype]
         quadrattest = quadrat.test(splitted)
         quadratcount_pvalue[[phenotype]] = quadrattest$p.value
         
         if (plotter[2] == TRUE){
-            png(filename = paste0(file.path(fig.prefix, sample_name),"_quadratcounts_",phenotype,".png"))
+            png(filename = paste0(file.path(output_dir, sample_name),"_quadratcounts_",phenotype,".png"))
             # png(filename = paste0(fig.prefix, sample_name,"_quadratcounts_",phenotype,".png"))
             par(mar = c(0,2,0,0)+0.1)
             # par(mar=c(6,6,6,6)+0.1, mgp = c(2,1,0))
-            plot(splitted, cols = Cols[levels(marks(csd_ppp))], xlab = "", ylab = "", main = "",  pch = 20)
+            plot(splitted, cols = colors_phenotype[levels(marks(csd_ppp))], xlab = "", ylab = "", main = "",  pch = 20)
             plot(quadratcount(splitted), add = TRUE)
             title(paste("Counts of", phenotype, "in sample", sample_name), line = -5)
             dev.off()
@@ -136,14 +211,16 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
     }
     
     
+    
     # Replace "+" with "T" and "-" with "F" in phenotype vector and in the csd for correct functioning of extracting inbuild statistics.
-    
-    pheno_vector = str_replace_all(pheno_vector,"[+]","T")
-    pheno_vector = str_replace_all(pheno_vector,"[-]","F")
-    
-    
-    csd$Phenotype = str_replace_all(csd$Phenotype,"[+]","T")
-    csd$Phenotype = str_replace_all(csd$Phenotype,"[-]","F")
+    if (!is.null(phenotype) & !is.null(colors_phenotype)){
+        pheno_vector = str_replace_all(pheno_vector,"[+]","T")
+        pheno_vector = str_replace_all(pheno_vector,"[-]","F")
+        
+        
+        csd$Phenotype = str_replace_all(csd$Phenotype,"[+]","T")
+        csd$Phenotype = str_replace_all(csd$Phenotype,"[-]","F")
+    }
     
     csd_ppp = ppp(x=csd[[XposCol]], y=csd[[YposCol]], 
                   window = owin(c(0, max(csd[[XposCol]])), c(0, max(csd[[YposCol]]))), 
@@ -181,7 +258,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, Cols = NULL, phenotype = NULL
                 res = 80
             }
             
-            png(filename = paste0(file.path(fig.prefix, sample_name),"_statistic_",option,".png"),
+            png(filename = paste0(file.path(output_dir, sample_name),"_statistic_",option,".png"),
                 width = width, height = height, res = res)
             # png(filename = paste0(fig.prefix, sample_name,"_statistic_",option,".png"),
             #     width = width, height = height, res = res)
@@ -225,7 +302,9 @@ getMAD <- function(data_with_distance, pairwise_distances, pheno_vector){
     MAD = MED
     MED_min = MED
     MAD_min = MED
-    
+    # print(pheno_vector)
+    # view(data_with_distance)
+    # stop("getMAD")
     for (from in pheno_vector){
         filter_from = data_with_distance %>% filter(`Phenotype` == from & `Phenotype` != "")
         IDs_from = filter_from$`Cell ID`
