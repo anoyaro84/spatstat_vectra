@@ -39,10 +39,19 @@ paste("dimensions of the data is", dim(data_filtered_with_distance)[1], "times",
 # preprocessing data and statistics
 
 # colors according to slides Marit and plot conventions
-pheno_vector_absolut = c("CD163+PDL1-","CD163+PDL1+","CD3+CD8-PD1-", "CD3+CD8-PD1+", "CD3+CD8+PD1-", "CD3+CD8+PD1+","Other","Other PDL1+","PAX5+PDL1-", "PAX5+PDL1+")
+pheno_vector_absolut = c("CD163+PDL1-","CD163+PDL1+","CD3+CD8-PD1-", "CD3+CD8-PD1+", "CD3+CD8+PD1-", "CD3+CD8+PD1+","Other","Other PDL1+","PAX5+PDL1-", "PAX5+PDL1+", "")
 
-colors_absolut = c("magenta", "brown", "red", "blue", "green", "yellow", "gray", "pink", "orange", "cyan")
+colors_absolut = c("magenta", "brown", "red", "blue", "green", "yellow", "gray", "pink", "orange", "cyan", "gray")
 names(colors_absolut) = pheno_vector_absolut
+
+# convention to thresholding data
+
+pheno_vector_separation = c("Macrophage", "Macrophage", "T cells", "T cells", "T cells", "T cells", "Other", "Other", "Tumor", "Tumor", "Other")
+names(pheno_vector_absolut) = pheno_vector_separation
+
+
+colors_absolut_separation = c("magenta", "magenta", "red", "red", "red", "red", "gray", "gray", "orange", "orange", "gray")
+names(colors_absolut_separation) = pheno_vector_separation
 
 
 dim_n = length(pheno_vector_absolut)
@@ -60,10 +69,21 @@ source("spatstat_vectra.R")
 
 
 # colors according to slides Marit and plot conventions
-pheno_vector_absolut = c("CD163+PDL1-","CD163+PDL1+","CD3+CD8-PD1-", "CD3+CD8-PD1+", "CD3+CD8+PD1-", "CD3+CD8+PD1+","Other","Other PDL1+","PAX5+PDL1-", "PAX5+PDL1+")
+pheno_vector_absolut = c("CD163+PDL1-","CD163+PDL1+","CD3+CD8-PD1-", "CD3+CD8-PD1+", "CD3+CD8+PD1-", "CD3+CD8+PD1+","Other","Other PDL1+","PAX5+PDL1-", "PAX5+PDL1+", "")
 
-colors_absolut = c("magenta", "brown", "red", "blue", "green", "yellow", "gray", "pink", "orange", "cyan")
+colors_absolut = c("magenta", "brown", "red", "blue", "green", "yellow", "gray", "pink", "orange", "cyan", "gray")
 names(colors_absolut) = pheno_vector_absolut
+
+pheno_vector_separation = NULL
+colors_absolut_separation = NULL
+
+# convention to thresholding data
+
+# pheno_vector_separation = c("Macrophage", "Macrophage", "T cells", "T cells", "T cells", "T cells", "Other", "Other", "Tumor", "Tumor", "Other")
+# names(pheno_vector_absolut) = pheno_vector_separation
+# 
+# colors_absolut_separation = c("magenta", "magenta", "red", "red", "red", "red", "gray", "gray", "orange", "orange", "gray")
+# names(colors_absolut_separation) = pheno_vector_separation
 
 
 # run for one sample name
@@ -81,45 +101,43 @@ samples_output = list()
 r_vec = c(20)
 # r_vec currently does not work well when given NULL see inside spatstat_vectra
 
-plotter_sample = FALSE
-plotter_quadrat = FALSE
-plotter_alltypes = FALSE
+plotter_sample = TRUE
+plotter_quadrat = TRUE
+plotter_alltypes = TRUE
 
 plotter_bools = c(plotter_sample, plotter_quadrat, plotter_alltypes)
 
 selected_options = NULL
 
 for (samplename_long in paths[1:1]){
-  # print(samplename_long)
-  # samplename_long = "C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/HO105-194_[16067,37856]_cell_seg_data.txt" # PD-L1 positive cluster + Tumor cluster
-  # print(samplename_long)
-  # print(paste("path of data is ", samplename))
+
   data = purrr::map_df(samplename_long, read_cell_seg_data, pixels_per_micron = getOption("phenoptr.pixels.per.micron"))
   
   samplename = str_remove(samplename_long,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/")
   samplename = str_remove(samplename,"_cell_seg_data.txt")
   
-
-  if (TRUE %in% plotter_bools){
-    output_dir <- file.path("fig", samplename)
-    
-    if (!dir.exists(output_dir)){
-      dir.create(output_dir)
-    } else {
-      print(paste("Directory",samplename, "already exists! Figures were overwritten."))
-    }
-  }
+  print(samplename)
+  
+  # if (TRUE %in% plotter_bools){
+  #   output_dir <- file.path("fig","Complete Phenotype", samplename)
+  #   
+  #   if (!dir.exists(output_dir)){
+  #     dir.create(output_dir)
+  #   } else {
+  #     print(paste("Directory for Complete Phenotype and", samplename, "already exists! Figures were overwritten."))
+  #   }
+  # }
+  
+  # #get inside do_analyse
+  # data_with_distance = data %>%
+  #   do(bind_cols(., find_nearest_distance(.)))
+  # paste("dimensions of the data with distances is", dim(data_with_distance)[1], "times", dim(data_with_distance)[2])
   
   
-  data_with_distance = data %>%
-    do(bind_cols(., find_nearest_distance(.)))
-  paste("dimensions of the data with distances is", dim(data_with_distance)[1], "times", dim(data_with_distance)[2])
   
+  output =  do_analyse(Intable = data, PhenoOrder = pheno_vector_absolut, ColsOrder = colors_absolut, phenotype = pheno_vector_separation, colors_phenotype = colors_absolut_separation, plotter = plotter_bools, fig.prefix = '.', XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
   
-  
-  output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
-  
-  # output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = './', XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
+  # output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, ColsOrder = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = './', XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
   
   samples_output[[samplename]] = output
   # stop()
@@ -199,7 +217,7 @@ if (TRUE %in% plotter_bools){
   }
 }
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, ColsOrder = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -224,7 +242,7 @@ if (TRUE %in% plotter_bools){
   }
 }
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, ColsOrder = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -248,7 +266,7 @@ if (TRUE %in% plotter_bools){
   }
 }
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, ColsOrder = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -305,7 +323,7 @@ if (TRUE %in% plotter_bools){
   }
 }
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, ColsOrder = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -330,7 +348,7 @@ if (TRUE %in% plotter_bools){
   }
 }
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, ColsOrder = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -355,7 +373,7 @@ if (TRUE %in% plotter_bools){
   }
 }
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, ColsOrder = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -380,7 +398,7 @@ if (TRUE %in% plotter_bools){
   }
 }
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, ColsOrder = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -405,7 +423,7 @@ if (TRUE %in% plotter_bools){
   }
 }
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, ColsOrder = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -459,7 +477,7 @@ if (TRUE %in% plotter_bools){
   }
 }
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, ColsOrder = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -513,7 +531,7 @@ if (TRUE %in% plotter_bools){
   }
 }
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, ColsOrder = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -565,7 +583,7 @@ if (TRUE %in% plotter_bools){
   }
 }
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, ColsOrder = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -619,7 +637,7 @@ if (TRUE %in% plotter_bools){
   }
 }
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, ColsOrder = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -673,7 +691,7 @@ if (TRUE %in% plotter_bools){
   }
 }
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, ColsOrder = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
@@ -688,7 +706,7 @@ data_with_distance = data %>%
 samplename = str_remove(samplename_path,"C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/")
 samplename = str_remove(samplename,"_cell_seg_data.txt")
 
-output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, Cols = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
+output =  do_analyse(Intable = data_with_distance, PhenoOrder = pheno_vector_absolut, ColsOrder = colors_absolut, phenotype = NULL, plotter = plotter_bools, fig.prefix = output_dir, XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
 
 samples_output[[samplename]] = output
 
