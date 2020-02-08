@@ -60,7 +60,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL, phenotype =
             output_dir <- file.path(fig.prefix,"fig","Complete Phenotype", sample_name)
             
             if (!dir.exists(output_dir)){
-                dir.create(output_dir)
+                dir.create(output_dir, recursive=TRUE)
             } else {
                 print(paste("Directory for Complete Phenotype and", samplename, "already exists! Figures were overwritten."))
             }
@@ -69,8 +69,8 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL, phenotype =
         # convention to thresholding data
         
         for(pheno in pheno_vector) {
-            csd$Phenotype[csd$Phenotype == pheno] = names(PhenoOrder[PhenoOrder == pheno])
-            Intable$Phenotype[Intable$Phenotype == pheno] = names(PhenoOrder[PhenoOrder == pheno])
+            csd$Phenotype[csd$Phenotype == pheno] = names(phenotype[phenotype == pheno])
+            Intable$Phenotype[Intable$Phenotype == pheno] = names(phenotype[phenotype == pheno])
         }
         pheno_vector = unique(csd$Phenotype)
         
@@ -78,7 +78,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL, phenotype =
             output_dir <- file.path(fig.prefix,"fig","Threshold Phenotype", samplename)
             
             if (!dir.exists(output_dir)){
-                dir.create(output_dir)
+                dir.create(output_dir, recursive=TRUE)
             } else {
                 print(paste("Directory for Threshold Phenotype and", samplename, "already exists! Figures were overwritten."))
             }
