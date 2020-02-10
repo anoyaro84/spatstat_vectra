@@ -10,7 +10,10 @@ output:
 ```{r load_package}
 library(reshape2)
 source('spatstat_vectra.R')
-base_path <- '../Exported data tables/'
+
+
+base_path <- '../Exported data tables/' # Working for Yongsoo
+base_path <- 'C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/' # working for Erik
 paths <- list_cell_seg_files(base_path)
 paste("There are", length(paths), "paths currently loaded")
 
@@ -34,6 +37,7 @@ color_simple = c(Macrophage = "magenta", Tcells = "red", Tumors = "orange", Othe
 
 
 ```{r HO105_extreme, fig.width=8, fig.height=8}
+source('spatstat_vectra.R')
 #base_path <- system.file("extdata", "samples", package = "phenoptrExamples")
 extreme = paste0(base_path, c(
 		'HO105-194_[16067,37856]_cell_seg_data.txt', # PD-L1 positive cluster + Tumor cluster
@@ -45,14 +49,12 @@ extreme = paste0(base_path, c(
 outputs = list()
 for (file in extreme){
 	print(paste('procesing', file))
-
+    
 	data = purrr::map_df(file, read_cell_seg_data, pixels_per_micron = getOption("phenoptr.pixels.per.micron"))
-	data_with_distance = data %>%
-	  do(bind_cols(., find_nearest_distance(.)))
-
+    
   	samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(file, '/')[[1]],1))
-	outputs[[samplename]] = do_analyse(Intable = data_with_distance, PhenoOrder= phenotype_simple, 
-                ColsOrder = color_simple, plotter = c(TRUE, TRUE,TRUE),XposCol = 'Cell X Position', envelope=TRUE, 
+	outputs[[samplename]] = do_analyse(Intable = data, PhenoOrder= phenotype_simple, 
+                ColsOrder = color_simple, plotter = c(FALSE, TRUE,TRUE),XposCol = 'Cell X Position', envelope=TRUE, 
 			    fig.prefix = './simple/', fig.width = 720, fig.height = 720,
 			    YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec)
 }
