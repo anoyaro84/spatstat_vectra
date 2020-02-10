@@ -10,7 +10,7 @@ output:
 ```{r load_package}
 library(reshape2)
 source('spatstat_vectra.R')
-base_path <- '../../data/Exported data tables/'
+base_path <- '../Exported data tables/'
 paths <- list_cell_seg_files(base_path)
 paste("There are", length(paths), "paths currently loaded")
 
@@ -20,6 +20,15 @@ pheno_vector_absolut = c("CD163+PDL1-","CD163+PDL1+","CD3+CD8-PD1-", "CD3+CD8-PD
 colors_absolut = c("magenta", "brown", "red", "blue", "green", "yellow", "gray", "pink", "orange", "cyan")
 names(colors_absolut) = pheno_vector_absolut
 r_vec = c(10,20)
+
+
+phenotype_simple = list(Macrophage = c("CD163+PDL1-","CD163+PDL1+"),
+                      Tcells = c("CD3+CD8-PD1-", "CD3+CD8-PD1+", "CD3+CD8+PD1-", "CD3+CD8+PD1+"),
+                      Tumors = c("PAX5+PDL1-", "PAX5+PDL1+"),
+                      Others = c("Other", "Other PDL1+")
+                      )
+
+color_simple = c(Macrophage = "magenta", Tcells = "red", Tumors = "orange", Others = "gray")
 
 ```
 
@@ -42,10 +51,10 @@ for (file in extreme){
 	  do(bind_cols(., find_nearest_distance(.)))
 
   	samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(file, '/')[[1]],1))
-	outputs[[samplename]] = do_analyse(data_with_distance, pheno_vector_absolut, colors_absolut, 
-			    NULL, plotter = c(TRUE, TRUE,TRUE),XposCol = 'Cell X Position', envelope=TRUE, 
-			    fig.prefix = './', fig.width = 720, fig.height = 720,
-			    YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', samplename, r_vec = r_vec)
+	outputs[[samplename]] = do_analyse(Intable = data_with_distance, PhenoOrder= phenotype_simple, 
+                ColsOrder = color_simple, plotter = c(TRUE, TRUE,TRUE),XposCol = 'Cell X Position', envelope=TRUE, 
+			    fig.prefix = './simple/', fig.width = 720, fig.height = 720,
+			    YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec)
 }
 ```
 
