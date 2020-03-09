@@ -18,10 +18,21 @@ paths <- list_cell_seg_files(base_path)
 paste("There are", length(paths), "paths currently loaded")
 
 
-pheno_vector_absolut = c("CD163+PDL1-","CD163+PDL1+","CD3+CD8-PD1-", "CD3+CD8-PD1+", "CD3+CD8+PD1-", "CD3+CD8+PD1+","Other","Other PDL1+","PAX5+PDL1-", "PAX5+PDL1+")
+phenotype_complete = c("CD163+PDL1-","CD163+PDL1+",
+                       "CD3+CD8-PD1-", "CD3+CD8-PD1+", "CD3+CD8+PD1-", "CD3+CD8+PD1+",
+                       "Other","Other PDL1+",
+                       "PAX5+PDL1-", "PAX5+PDL1+",
+                       "")
 
-colors_absolut = c("magenta", "brown", "red", "blue", "green", "yellow", "gray", "pink", "orange", "cyan")
-names(colors_absolut) = pheno_vector_absolut
+color_complete = c("magenta", "brown",
+                   "red", "blue", "green", "yellow",
+                   "gray", "pink",
+                   "orange", "cyan",
+                   "gray")
+names(color_complete) = phenotype_complete
+
+fig.prefix.complete = './complete'
+
 r_vec = c(10,20)
 
 
@@ -33,6 +44,7 @@ phenotype_simple = list(Macrophage = c("CD163+PDL1-","CD163+PDL1+"),
 
 color_simple = c(Macrophage = "magenta", Tcells = "red", Tumors = "orange", Others = "gray")
 
+fig.prefix.simple = './simple'
 ```
 
 
@@ -46,6 +58,17 @@ extreme = paste0(base_path, c(
 	))
 
 
+# Plot variables
+
+plotter_sample = FALSE
+plotter_quadrat = TRUE
+plotter_alltypes = TRUE
+
+plotter_bools = c(plotter_sample, plotter_quadrat, plotter_alltypes)
+
+# Select spatial statistics, of NULL then all statistics are selected
+selected_options = NULL
+
 outputs = list()
 for (file in extreme){
 	print(paste('procesing', file))
@@ -53,14 +76,14 @@ for (file in extreme){
 	data = purrr::map_df(file, read_cell_seg_data, pixels_per_micron = getOption("phenoptr.pixels.per.micron"))
     
   	samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(file, '/')[[1]],1))
-	outputs[[samplename]] = do_analyse(Intable = data, PhenoOrder= phenotype_simple, 
-                ColsOrder = color_simple, plotter = c(FALSE, TRUE,TRUE),XposCol = 'Cell X Position', envelope=TRUE, 
-			    fig.prefix = './simple/', fig.width = 720, fig.height = 720,
-			    YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec)
+	outputs[[samplename]] = do_analyse(Intable = data, PhenoOrder = phenotype_simple, ColsOrder = color_simple,
+                      XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype',
+                      sample_name = samplename, plotter = plotter_bools, fig.prefix = fig.prefix.simple, fig.width = 720, fig.height = 720,
+                      r_vec = r_vec, options = selected_options, envelope = TRUE)
 }
 ```
 
-```{r extreme_cases, eval=F}
+```{r extreme_cases, eval=F, outdated}
 
 pheno_vector_absolut = c("CD163+PDL1-","CD163+PDL1+","CD3+CD8-PD1-", "CD3+CD8-PD1+", "CD3+CD8+PD1-", "CD3+CD8+PD1+","Other","Other PDL1+","PAX5+PDL1-", "PAX5+PDL1+")
 Cols = c("magenta","brown","red","blue","green","yellow","gray","pink","orange","cyan")

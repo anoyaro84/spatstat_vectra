@@ -64,13 +64,6 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL,
             
             
             check_elsestate = TRUE
-            browser()
-            # csd = csd[csd$Phenotype %in% PhenoOrder,]
-            # Intable = Intable[Intable$Phenotype %in% PhenoOrder,]
-            # pheno_vector = unique(csd$Phenotype)
-            # print(dim(Intable))
-            # print(dim(csd))
-            # browser()
         }
         colors_phenotype = ColsOrder
         
@@ -186,29 +179,29 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL,
     
     
     
-    browser()
+    
     # Replace "+" with "T" and "-" with "F" in all variables for correct functioning of extracting inbuild statistics.
     
     PhenoOrder = lapply(PhenoOrder, function(x) {gsub("+", "T", x, fixed = TRUE)})
     PhenoOrder = lapply(PhenoOrder, function(x) {gsub("-", "F", x, fixed = TRUE)})
     if (isTRUE(check_elsestate)){
-        browser()
         names(PhenoOrder) = PhenoOrder
     }
-    browser()
+    
+    
     pheno_vector = gsub("+", "T", pheno_vector, fixed = TRUE)
     pheno_vector = gsub("-", "F", pheno_vector, fixed = TRUE)
-    browser()
+    
     csd$Phenotype = sapply(csd$Phenotype, function(x) {gsub("+", "T", x, fixed = TRUE)})
     csd$Phenotype = sapply(csd$Phenotype, function(x) {gsub("-", "F", x, fixed = TRUE)})
     
-    browser()
+    
     
     csd_ppp = ppp(x=csd[[XposCol]], y=csd[[YposCol]], 
                   window = owin(c(0, max(csd[[XposCol]])), c(0, max(csd[[YposCol]]))), 
                   marks = factor(csd[[PhenoCol]], names(PhenoOrder)))
     
-    browser()
+    
     values_options = list()
     
     all_types_options_sample_name = list()
@@ -417,7 +410,7 @@ interpolate_r <- function(all_types, r_vec, option, envelope_bool){
             }
             if ((option == "G")|| (option == "F") || (option == "J")|| (option == "Gdot") || (option == "Jdot")){
                 
-                # browser()
+                
                 
                 if (max(r_emperic)< r_i){
                     warning("default r interval is to small")
