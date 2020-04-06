@@ -8,6 +8,7 @@ library(zoo)
 library(RColorBrewer)
 library(ggplot2)
 library(reshape2)
+library(latex2exp)
 
 # phenotype can be converted by the "phenotype argument".
 # why statistics was used as argument?
@@ -87,7 +88,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL,
     }
     
     
-    options_all = c("G","F", "J","Gdot", "Jdot", "K", "L", "pcf", "Kdot", "Ldot")
+    options_all = list("G","F", "J","Gdot", "Jdot", "K", "L", "pcf", "Kdot", "Ldot")
     
     
     if (is.null(options)){
@@ -95,7 +96,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL,
     } else if (all(options %in% options_all)){
         options = options
     } else{
-        stop("one or more spatial statistic in parameter 'options' are not correctly defined")
+        stop("one or more spatial statistics in parameter 'options' are not correctly defined")
     }
     
     
@@ -112,7 +113,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL,
     Intable_with_distance = Intable %>%
         do(bind_cols(., find_nearest_distance(.)))
     print(paste0("dimensions of the data with distances is ", dim(Intable_with_distance)[1], " times ", dim(Intable_with_distance)[2]))
-    # print(dim(Intable_with_distance))
+    
     output = getMAD(Intable_with_distance, pairwise_distance, pheno_vector)
     MED_min = output[[1]]
     MED = output[[2]]
@@ -120,23 +121,13 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL,
     MAD = output[[4]]
     
     
-    
-    # normal statistics: Counts and Density
-    Area_sample = max(csd[[XposCol]])*max(csd[[YposCol]])
-    output = getDensity(csd, pheno_vector, Area_sample)
-    
-    counts_sample = output[[1]]
-    density_sample = output[[2]]
-    
-    
-    
     # Creation of the Poisson Point Process for plotting overall figure and quadratcounts figures
     
     
     csd_ppp = ppp(x=csd[[XposCol]], y=csd[[YposCol]], 
-                  window = owin(c(0, max(csd[[XposCol]])), c(0, max(csd[[YposCol]]))), 
+                  window = owin(c(0, max(csd[[XposCol]])), c(0, max(csd[[YposCol]]))),
                   marks = factor(csd[[PhenoCol]], names(PhenoOrder)))
-    
+    unitname(csd_ppp) = c("micron", "microns")
     
     if (plotter[1] == TRUE) {
         png(filename = paste0(file.path(output_dir, sample_name),".png"))
@@ -145,7 +136,20 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL,
         title(paste("Location of cells and their phenotype\n in sample", sample_name), line = -5)
         dev.off()
     }
+    browser()
     
+    
+    
+    # normal statistics: Counts and Density
+    Area_sample = summary(csd_ppp)$window$area
+    output = getDensity(csd, pheno_vector, Area_sample)
+    
+    counts_sample = output[[1]]
+    density_sample = output[[2]]
+    
+    
+    
+
     
     # Make plots for the quadrat counts of each phenotype and pairwise plots for evaluating the pairwise stats
     
@@ -198,9 +202,9 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL,
     
     
     csd_ppp = ppp(x=csd[[XposCol]], y=csd[[YposCol]], 
-                  window = owin(c(0, max(csd[[XposCol]])), c(0, max(csd[[YposCol]]))), 
+                  window = owin(c(0, max(csd[[XposCol]])), c(0, max(csd[[YposCol]]))),
                   marks = factor(csd[[PhenoCol]], names(PhenoOrder)))
-    
+    unitname(csd_ppp) = c("micron", "microns")
     
     values_options = list()
     
@@ -241,9 +245,9 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL,
         
         output = interpolate_r(all_types, r_vec, option, envelope_bool)
         
-        r_close_list[[option]] = output[[1]]
-        statistic_close_list[[option]] = output[[2]]
-        normalized_list[[option]] = output[[3]]
+        
+        statistic_close_list[[option]] = output[[1]]
+        normalized_list[[option]] = output[[2]]
     }
     
     output_all = list()
@@ -256,7 +260,6 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL,
     output_all[["MED"]] = MED
     output_all[["MAD_min"]] = MAD_min
     output_all[["MAD"]] = MAD
-    output_all[["r_close_list"]] = r_close_list
     output_all[["statistic_close_list"]] = statistic_close_list
     output_all[["normalized_list"]] = normalized_list
     output_all[["all_types_options_sample_name"]] = all_types_options_sample_name
@@ -465,7 +468,7 @@ interpolate_r <- function(all_types, r_vec, option, envelope_bool){
             }
         }
     }
-    return(list(r_close_list, statistic_close_list, normalized_list))
+    return(list(statistic_close_list, normalized_list))
 }
 
 
