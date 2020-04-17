@@ -83,6 +83,25 @@ plot(OakMaple[OakMaple$marks == "Maple"], main=NULL, cols = c("blue", "red"), pc
 plot(quadratcount(OakMaple[OakMaple$marks == "Maple"]), add=TRUE)
 title("The Marked Point Process filtered on the Maples and its quadratcounts", line=0)
 ```
+```{r RUN homogenous and inhomogenous}
+# homogenous and inhomogenous
+set.seed(123456789)
+
+homo = rpoispp(20,win = owin(c(0,2),c(0,2)))
+unitname(homo) = c("metre", "metres")
+plot(homo, main = "",  pch = 20)
+title(main = TeX('Poisson Point Process created with rate $\\lambda = 20$'),line = 0.5)
+lab = function(x,y){
+    #return(exp(-x^2-y^2))
+    return(x+100*y^2)
+}
+inhomo = rpoispp(lab ,win = owin(c(0,2),c(0,2)))
+unitname(inhomo) = c("metre", "metres")
+plot(inhomo, xlab = "", ylab = "", main = "",  pch = 20)
+title(main = TeX('Poisson Point Process created with rate $\\lambda(x,y) = x+100y^2$'),line = 0.5)
+
+#plot(Kest(homo)$theo~Kest(homo)$r)
+```
 
 ```{r RUN emptyspace}
 # OakMaple_emptyspace

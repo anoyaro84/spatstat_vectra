@@ -111,13 +111,13 @@ paste("There are", length(paths), "different samples currently available.")
 
 samples_output = list()
 
-# Plot variables
+# Plot variables and save
 
 plotter_sample = TRUE
 plotter_quadrat = TRUE
 plotter_alltypes = TRUE
 
-plotter_bools = c(plotter_sample, plotter_quadrat, plotter_alltypes)
+plotter_bools = list(plotter_sample, plotter_quadrat, plotter_alltypes)
 
 r_vec = c(20)
 # r_vec currently does not work well when given NULL see inside spatstat_vectra
@@ -139,10 +139,7 @@ for (samplename_long in paths[1]){
                       XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype',
                       sample_name = samplename, plotter = plotter_bools, fig.prefix = fig.prefix.simple, fig.width = 720, fig.height = 720,
                       r_vec = r_vec, options = selected_options, envelope = TRUE)
-  
-  # output =  do_analyse(Intable = data, PhenoOrder = pheno_vector_absolut, ColsOrder = colors_absolut, phenotype = pheno_vector_separation, colors_phenotype = colors_absolut_separation, plotter = plotter_bools, fig.prefix = '.', XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec, options = selected_options, envelope_bool = TRUE)
-  
-  
+
   samples_output[[samplename]] = output
   # stop()
   

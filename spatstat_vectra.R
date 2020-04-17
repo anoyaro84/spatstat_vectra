@@ -130,13 +130,14 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL,
     unitname(csd_ppp) = c("micron", "microns")
     
     if (plotter[1] == TRUE) {
+        
         png(filename = paste0(file.path(output_dir, sample_name),".png"))
         par(mar = c(0,2,0,0)+0.1)
         plot(csd_ppp, cols = colors_phenotype[levels(csd_ppp$marks)], xlab = "", ylab = "", main = "", pch = 20)
         title(paste("Location of cells and their phenotype\n in sample", sample_name), line = -5)
         dev.off()
     }
-    browser()
+    
     
     
     
@@ -166,18 +167,24 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL,
             splitted = csd_ppp[(marks(csd_ppp) == phenotype1) | (marks(csd_ppp) == phenotype2)] # here somehow index out of bounds
             
             if (phenotype1 == phenotype2){
-                png(filename = paste0(file.path(output_dir, sample_name),"_quadratcounts_", phenotype1, ".png"))
-                plot(splitted, cols = colors_phenotype[levels(csd_ppp$marks)], xlab = "", ylab = "", main = "",  pch = 20)
+                if (plotter[2] == TRUE){
+                    png(filename = paste0(file.path(output_dir, sample_name),"_quadratcounts_", phenotype1, ".png"))
+                    plot(splitted, cols = colors_phenotype[levels(csd_ppp$marks)], xlab = "", ylab = "", main = "",  pch = 20)
+                    plot(quadratcount(splitted), add = TRUE)
+                    title(paste("Quadratcounts of", phenotype1, "\n in sample", sample_name), line = -3)
+                    dev.off()
+                }
                 quadrattest = quadrat.test(splitted)
                 quadratcount_pvalue[[phenotype1]] = quadrattest$p.value
-                plot(quadratcount(splitted), add = TRUE)
-                title(paste("Quadratcounts of", phenotype1, "\n in sample", sample_name), line = -3)
-            } else{
+
+            }
+            if (plotter[2] == TRUE){
                 png(filename = paste0(file.path(output_dir, sample_name), phenotype1, "-", phenotype2, ".png"))
                 plot(splitted, cols = colors_phenotype[levels(csd_ppp$marks)], xlab = "", ylab = "", main = "",  pch = 20)
                 title(paste("Location of", phenotype1, "and", phenotype2, "\n in sample", sample_name), line = -3)
+                dev.off()
             }
-            dev.off()
+            
         }
     }
     
@@ -217,9 +224,9 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL,
     
     for (option in options){
         
-        if (option %in% c("K","L","Kdot","Ldot","pcf")){  # (option == "K")|| (option == "L") || (option == "Kdot")|| (option == "Ldot") || (option == "pcf")){
+        if (option %in% list("K","L","Kdot","Ldot","pcf")){  # (option == "K")|| (option == "L") || (option == "Kdot")|| (option == "Ldot") || (option == "pcf")){
             all_types = alltypes(csd_ppp,fun = paste(option), dataname = sample_name, envelope = envelope_bool, correction = "iso")
-        } else{
+        } else {
             all_types = alltypes(csd_ppp,fun = paste(option), dataname = sample_name, envelope = envelope_bool, correction = "km")
         }
         
@@ -227,11 +234,12 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL,
         all_types_options_sample_name[[option]] = all_types
         
         if (plotter[3] == TRUE){
-            if (option %in% c("G","J","K", "L","pcf")){ # (option == "K")|| (option == "L") || (option == "pcf")){
+            
+            if (option %in% list("G","J","K", "L","pcf")){ # (option == "K")|| (option == "L") || (option == "pcf")){
                 width = 800
                 height = 700
                 res = 80
-            } else{
+            } else {
                 width = 800
                 height = 900
                 res = 80
@@ -239,7 +247,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL,
             
             png(filename = paste0(file.path(output_dir, sample_name),"_statistic_",option,".png"),
                 width = width, height = height, res = res)
-            plot(all_types)
+            plot(all_types, samex = TRUE, samey = TRUE)
             dev.off()
         }
         
@@ -311,7 +319,7 @@ getDensity <- function(data, pheno_vector, Area_sample){
     names(density_sample) = pheno_vector
     
     for (i in pheno_vector){
-        n = dim(data %>% filter(`Phenotype` == i & `Phenotype` != ""))[1]
+        n = dim(data %>% filter(`Phenotype` == i))[1]
         counts_sample[[i]] = n
         density_sample[[i]] = n / Area_sample
     }
@@ -471,6 +479,206 @@ interpolate_r <- function(all_types, r_vec, option, envelope_bool){
     return(list(statistic_close_list, normalized_list))
 }
 
+######### RUN feature extract function #########
+feature_extract <- function(outputs){
+    functions = c()
+    rs = c()
+    # get function names and rs
+    for (out in outputs) {
+        functions = union(functions, names(out$statistic_close_list))
+        rs = union(rs, names(out$statistic_close_list[[1]]))
+    }
+    
+    # get feature names
+    feat_names = list()
+    for (func in functions) {
+        feat_names[[func]] = c()
+        for (out in outputs) {
+            feat_names[[func]] = union(feat_names[[func]],
+                                       apply(expand.grid(dimnames(out$all_types_options_sample_name[[func]]$which)), 
+                                             1, function(x) gsub('/$', '', paste0(x, collapse='/')))
+            )
+        }
+    }
+    
+    # create a matrix
+    allfeat = lapply(feat_names, function(x) expand.grid(rs, x))
+    allfeat = lapply(allfeat, function(x) {apply(x, 1, function(y) paste0(y, collapse='_'))})
+    allfeat_flat = c()
+    
+    for (i in 1:length(allfeat)) {
+        allfeat_flat = c(allfeat_flat, paste0(names(allfeat)[[i]], '_', allfeat[[i]]),
+                         paste0('Normalized_',names(allfeat)[[i]], '_', allfeat[[i]])
+        )
+    }
+    
+    
+    mat_ripleys = matrix(NA, nrow = length(allfeat_flat), ncol = length(outputs),
+                 dimnames = list(sort(allfeat_flat), names(outputs)))
+    
+    # fill matrix
+    for (i in 1:length(outputs)) {
+        out = outputs[[i]]
+        name = names(outputs)[i]
+        for (func in names(out$statistic_close_list)) {
+            df = melt(out$all_types_options_sample_name[[func]]$which)
+            df$featname = gsub("/NA$", "", paste0(df$Var1, "/", df$Var2))
+            for (r in rs) {
+                data = as.data.frame(t(as.data.frame(out$statistic_close_list[[func]][[r]])))
+                if (nrow(data) > 0){
+                    data$which = unlist(lapply(rownames(data), 
+                                               function(x) as.numeric(tail(strsplit(x, '.', fixed=T)[[1]],1))))
+                    #ind = match(data$which, df$value)
+                    ind = match(df$value, data$which)
+                    df$Ffeatname = paste0(func, '_', r, '_', df$featname)
+                    df$measure = data$V1[ind]
+                    df$Nmeasure = as.data.frame(t(as.data.frame(out$normalized_list[[func]][[r]])))$V1[ind]
+                    mat_ripleys[df$Ffeatname, name] = df$measure
+                    mat_ripleys[paste0('Normalized_', df$Ffeatname), name] = df$Nmeasure
+                }
+            }
+        }
+    }
+    
+    
+    counts = c()
+    dens = c()
+    
+    # get phenotypes for counts and densities
+    for (out in outputs) {
+        counts = union(counts, names(out$counts_sample))
+        dens = union(dens, names(out$density_sample))
+    }
+    
+    # create a matrix for counts
+    mat_counts = matrix(NA, nrow = length(counts), ncol = length(outputs),
+                 dimnames = list(paste0('counts_sample_', sort(counts)), names(outputs)))
+    
+    # create a matrix for density
+    mat_density = matrix(NA, nrow = length(dens), ncol = length(outputs),
+                  dimnames = list(paste0('density_sample_', sort(dens)), names(outputs)))
+    
+    
+    # fill matrices for counts and density
+    for (i in seq_along(outputs)) {
+        out = outputs[[i]]
+        name = names(outputs)[i]
+        data_counts = out$counts_sample
+        data_density = out$density_sample
+        for (featname in names(data_counts)){
+          mat_counts[paste0('counts_sample_',featname),name] = data_counts[[featname]]
+          mat_density[paste0('density_sample_',featname),name] = data_density[[featname]]
+        }
+    }
+    
+    
+    MED_min_pheno = c()
+    MED_pheno = c()
+    MAD_min_pheno = c()
+    MAD_pheno = c()
+    
+    # get phenotypes for median minimal, median, MAD minimal, MAD.
+    for (out in outputs) {
+      MED_min_pheno = union(MED_min_pheno, rownames(out$MED_min))
+      MED_pheno = union(MED_pheno, rownames(out$MED))
+      MAD_min_pheno = union(MAD_min_pheno, rownames(out$MAD_min))
+      MAD_pheno = union(MAD_pheno, rownames(out$MAD))
+    }
+    
+    collect_pheno = sort(union(MED_min_pheno, union(MED_pheno, union(MAD_min_pheno,MAD_pheno))))
+    
+    
+    allfeat_min = lapply(collect_pheno, function(x) expand.grid(collect_pheno, x))
+    allfeat_min = lapply(allfeat_min, function(x) {apply(x, 1, function(y) paste0(y, collapse='_'))})
+    allfeat_min_flat = c()
+    
+    for (i in seq_along(allfeat_min)) {
+      # allfeat_min_flat = c(allfeat_min_flat, paste0(names(allfeat_min)[[i]], '_', allfeat_min[[i]]))
+      allfeat_min_flat = c(allfeat_min_flat, paste0(names(allfeat_min)[[i]], allfeat_min[[i]])) # why names(allfeat_min)[[i]] ?
+    }
+    allfeat_min = allfeat_min_flat
+    
+    allfeat_normal = combn(collect_pheno,2, simplify = FALSE)
+    allfeat_normal_identity = lapply(collect_pheno,function(x) rep(x,2))
+    allfeat_normal = c(allfeat_normal, allfeat_normal_identity)
+    allfeat_normal = sort(sapply(allfeat_normal, function(y) paste0(y, collapse = '_')))
+    
+    
+    
+    
+    MED_min_allfeat = paste0('MED_min_', allfeat_min)
+    MED_allfeat = paste0('MED_', allfeat_normal)
+    MAD_min_allfeat = paste0('MAD_min_', allfeat_min)
+    MAD_allfeat = paste0('MAD_', allfeat_normal)
+    
+    
+    # create a matrix for MED_min NON-symmetric for the features
+    mat_med_min = matrix(NA, nrow = length(MED_min_allfeat), ncol = length(outputs),
+                  dimnames = list(MED_min_allfeat, names(outputs)))
+    
+    # create a matrix for MED symmetric for the features
+    mat_med = matrix(NA, nrow = length(MED_allfeat), ncol = length(outputs),
+                  dimnames = list(MED_allfeat, names(outputs)))
+    
+    # create a matrix for MAD_min NON-symmetric for the features
+    mat_mad_min = matrix(NA, nrow = length(MAD_min_allfeat), ncol = length(outputs),
+                  dimnames = list(MAD_min_allfeat, names(outputs)))
+    
+    # create a matrix for MAD symmetric for the features
+    mat_mad = matrix(NA, nrow = length(MAD_allfeat), ncol = length(outputs),
+                  dimnames = list(MAD_allfeat, names(outputs)))
+    
+    
+    # fill matrices
+    for (i in seq_along(outputs)) {
+      out = outputs[[i]]
+      name = names(outputs)[i]
+      data_MED_min = out$MED_min
+      
+      data_MED = out$MED
+      data_MED = data_MED[sort(colnames(data_MED)),sort(rownames(data_MED))]
+      data_MAD_min = out$MAD_min
+      data_MAD = out$MAD
+      data_MAD = data_MAD[sort(colnames(data_MAD)),sort(rownames(data_MAD))]
+      
+      for (featname_from in rownames(data_MED_min)){
+        for (featname_to in colnames(data_MED_min)){
+          mat_med_min[paste0('MED_min_', featname_from, '_', featname_to),name] = data_MED_min[featname_from, featname_to]
+        }
+      }
+      
+      for (row in 1:length(rownames(data_MED))){
+        featname_from = rownames(data_MED)[row]
+        for (col in row:length(colnames(data_MED))){
+          featname_to = colnames(data_MED)[col]
+          mat_med[paste0('MED_', featname_from, '_', featname_to),name] = data_MED[featname_from, featname_to]
+        }
+      }
+      
+      for (featname_from in rownames(data_MAD_min)){
+        for (featname_to in colnames(data_MAD_min)){
+          mat_mad_min[paste0('MAD_min_', featname_from, '_', featname_to),name] = data_MAD_min[featname_from, featname_to]
+        }
+      }
+      
+      for (row in 1:length(rownames(data_MAD))){
+        featname_from = rownames(data_MAD)[row]
+        for (col in row:length(colnames(data_MAD))){
+          featname_to = colnames(data_MAD)[col]
+          mat_mad[paste0('MAD_', featname_from, '_', featname_to),name] = data_MAD[featname_from, featname_to]
+        }
+      }
+    }
+    
+    
+    
+    
+    mat = t(rbind(mat_ripleys, mat_counts, mat_density,
+                mat_med_min, mat_med, mat_mad_min, mat_mad))
+    
+    return(mat)
+}
+
 
 # Calculate the mean shortest distance for each pair of types, including itself
 calculate_mean <- function(csd, pheno_vector, pheno_vector_absoluut, plotter){
@@ -611,7 +819,7 @@ calculate_mean <- function(csd, pheno_vector, pheno_vector_absoluut, plotter){
     return(statistic_mean_sample_name)
 }
 
-######### RUN function for calculating area and Maxnorm #####
+# function for calculating area and Maxnorm
 calculate_area_norm <- function (ripleys, option){
   if (option == "K"){
     correction = "border"
@@ -630,69 +838,7 @@ calculate_area_norm <- function (ripleys, option){
 }
 
 
-feature_extract <- function(outputs){
-	functions = c()
-	rs = c()
-	# get function names and rs
-	for (out in outputs) {
-		functions = union(functions, names(out$statistic_close_list))
-		rs = union(rs, names(out$statistic_close_list[[1]]))
-	}
-
-	# get feature names
-	feat_names = list()
-	for (func in functions) {
-		feat_names[[func]] = c()
-		for (out in outputs) {
-			feat_names[[func]] = union(feat_names[[func]],
-					apply(expand.grid(dimnames(out$all_types_options_sample_name[[func]]$which)), 
-					      1, function(x) gsub('/$', '', paste0(x, collapse='/')))
-				)
-		}
-	}
-
-	# create a matrix
-	allfeat = lapply(feat_names, function(x) expand.grid(rs, x))
-	allfeat = lapply(allfeat, function(x) {apply(x, 1, function(y) paste0(y, collapse='_'))})
-	allfeat_flat = c()
-	for (i in 1:length(allfeat)) {
-		allfeat_flat = c(allfeat_flat, paste0(names(allfeat)[[i]], '_', allfeat[[i]]),
-				 paste0('Normalized_',names(allfeat)[[i]], '_', allfeat[[i]])
-				 )
-	}
 
 
-	mat = matrix(NA, nrow = length(allfeat_flat), ncol = length(outputs),
-		     dimnames = list(sort(allfeat_flat), names(outputs)))
-
-	# fill matrix
-	for (i in 1:length(outputs)) {
-		out = outputs[[i]]
-		name = names(outputs)[i]
-		for (func in names(out$statistic_close_list)) {
-			df = melt(out$all_types_options_sample_name[[func]]$which)
-			df$featname = gsub("/NA$", "", paste0(df$Var1, "/", df$Var2))
-			for (r in rs) {
-				data = as.data.frame(t(as.data.frame(out$statistic_close_list[[func]][[r]])))
-				if (nrow(data) > 0){
-					data$which = unlist(lapply(rownames(data), 
-						function(x) as.numeric(tail(strsplit(x, '.', fixed=T)[[1]],1))))
-					#ind = match(data$which, df$value)
-					ind = match(df$value, data$which)
-					df$Ffeatname = paste0(func, '_', r, '_', df$featname)
-					df$measure = data$V1[ind]
-					df$Nmeasure = as.data.frame(t(as.data.frame(out$normalized_list[[func]][[r]])))$V1[ind]
-					mat[df$Ffeatname, name] = df$measure
-					mat[paste0('Normalized_', df$Ffeatname), name] = df$Nmeasure
-				}
-			}
-		}
-	}
-
-	# add more features (density, count, etc..)
-#	extra_features <- c('MED_min
-
-	return(mat)
-}
 
 
