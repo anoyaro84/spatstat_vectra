@@ -480,7 +480,7 @@ interpolate_r <- function(all_types, r_vec, option, envelope_bool){
 }
 
 ######### RUN feature extract function #########
-feature_extract <- function(outputs){
+feature_extract <- function(outputs, mat_output_dir){
     functions = c()
     rs = c()
     # get function names and rs
@@ -670,11 +670,15 @@ feature_extract <- function(outputs){
       }
     }
     
-    
-    
-    
     mat = t(rbind(mat_ripleys, mat_counts, mat_density,
                 mat_med_min, mat_med, mat_mad_min, mat_mad))
+    
+    
+    # save matrix to csv for later inspection
+    
+    dir.create(mat_output_dir, recursive = T)
+    write.csv(mat,file = file.path(mat_output_dir, 'feature_matrix.csv'))
+    
     
     return(mat)
 }
