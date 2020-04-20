@@ -80,9 +80,9 @@ for (file in extreme){
                       sample_name = samplename, plotter = plotter_bools, fig.prefix = fig.prefix.simple, fig.width = 720, fig.height = 720,
                       r_vec = r_vec, options = selected_options, envelope = TRUE)
 }
-mat_output_dir = file.path(fig.prefix.simple, paste0(substr(samplename,1,9),'_output'))
 
-M = feature_extract(outputs, mat_output_dir)
+
+M = feature_extract(outputs, fig.prefix.simple)
 ```
 
 ```{r marit HO105 image check  STDNR 3, fig.width=8, fig.height=8}
@@ -123,9 +123,9 @@ for (file in pathcombi){
                       sample_name = samplename, plotter = plotter_bools, fig.prefix = fig.prefix.simple, fig.width = 720, fig.height = 720,
                       r_vec = r_vec, options = selected_options, envelope = TRUE)
 }
-mat_output_dir = file.path(fig.prefix.simple, paste0(substr(samplename,1,9),'_output'))
 
-M = feature_extract(outputs, mat_output_dir)
+
+M = feature_extract(outputs, fig.prefix.simple)
 ```
 
 ```{r marit HO105 image check  STDNR 60, fig.width=8, fig.height=8}
@@ -165,8 +165,8 @@ for (file in pathcombi){
                       r_vec = r_vec, options = selected_options, envelope = TRUE)
 }
 
-mat_output_dir = file.path(fig.prefix.simple, paste0(substr(samplename,1,9),'_output'))
 
-M = feature_extract(outputs, mat_output_dir)
+
+M = feature_extract(outputs, fig.prefix.simple)
 
 ```

@@ -147,7 +147,7 @@ for (samplename_long in paths[1]){
   counts_sample = output[[2]]
   Area_sample = output[[3]]
   density_sample = output[[4]]
-  quadratcount_pvalue = output[[5]]
+  quadratcount_X2statistic = output[[5]]
   MED_min = output[[6]]
   MED = output[[7]]
   MAD_min = output[[8]]

@@ -154,7 +154,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL,
     
     # Make plots for the quadrat counts of each phenotype and pairwise plots for evaluating the pairwise stats
     
-    quadratcount_pvalue = list()
+    quadratcount_X2statistic = list()
     amount_pheno = length(pheno_vector)
     
     for (counter1 in seq_along(pheno_vector)){
@@ -175,7 +175,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL,
                     dev.off()
                 }
                 quadrattest = quadrat.test(splitted)
-                quadratcount_pvalue[[phenotype1]] = quadrattest$p.value
+                quadratcount_X2statistic[[phenotype1]] = quadrattest$statistic[['X2']]
 
             }
             if (plotter[2] == TRUE){
@@ -263,7 +263,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL,
     output_all[["counts_sample"]] = counts_sample
     output_all[["Area_sample"]] = Area_sample
     output_all[["density_sample"]] = density_sample
-    output_all[["quadratcount_pvalue"]] = quadratcount_pvalue
+    output_all[["quadratcount_X2statistic"]] = quadratcount_X2statistic
     output_all[["MED_min"]] = MED_min
     output_all[["MED"]] = MED
     output_all[["MAD_min"]] = MAD_min
@@ -543,11 +543,13 @@ feature_extract <- function(outputs, mat_output_dir){
     
     counts = c()
     dens = c()
+    X2stat = c()
     
     # get phenotypes for counts and densities
     for (out in outputs) {
         counts = union(counts, names(out$counts_sample))
         dens = union(dens, names(out$density_sample))
+        X2stat = union(X2stat, names(out$quadratcount_X2statistic))
     }
     
     # create a matrix for counts
@@ -558,6 +560,9 @@ feature_extract <- function(outputs, mat_output_dir){
     mat_density = matrix(NA, nrow = length(dens), ncol = length(outputs),
                   dimnames = list(paste0('density_sample_', sort(dens)), names(outputs)))
     
+    # create a matrix for Chi-squared statistic of quadratcounts
+    mat_X2stat = matrix(NA, nrow = length(X2stat), ncol = length(outputs),
+                         dimnames = list(paste0('X2stat_sample_', sort(X2stat)), names(outputs)))
     
     # fill matrices for counts and density
     for (i in seq_along(outputs)) {
@@ -565,11 +570,14 @@ feature_extract <- function(outputs, mat_output_dir){
         name = names(outputs)[i]
         data_counts = out$counts_sample
         data_density = out$density_sample
+        data_X2stat = out$quadratcount_X2statistic
         for (featname in names(data_counts)){
           mat_counts[paste0('counts_sample_',featname),name] = data_counts[[featname]]
           mat_density[paste0('density_sample_',featname),name] = data_density[[featname]]
+          mat_X2stat[paste0('X2stat_sample_',featname),name] = data_X2stat[[featname]]
         }
     }
+    
     
     
     MED_min_pheno = c()
@@ -670,13 +678,12 @@ feature_extract <- function(outputs, mat_output_dir){
       }
     }
     
-    mat = t(rbind(mat_ripleys, mat_counts, mat_density,
+    mat = t(rbind(mat_ripleys, mat_counts, mat_density, mat_X2stat,
                 mat_med_min, mat_med, mat_mad_min, mat_mad))
     
     
     # save matrix to csv for later inspection
     
-    dir.create(mat_output_dir, recursive = T)
     write.csv(mat,file = file.path(mat_output_dir, 'feature_matrix.csv'))
     
     
