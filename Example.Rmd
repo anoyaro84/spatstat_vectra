@@ -85,7 +85,71 @@ for (file in extreme){
 M = feature_extract(outputs, fig.prefix.simple)
 ```
 
-```{r marit HO105 image check  STDNR 3, fig.width=8, fig.height=8}
+
+```{r marit HO105 image check  all via import, fig.width=8, fig.height=8}
+library('stringi')
+library(readxl)
+source('spatstat_vectra.R')
+
+base_path <- '../Exported data tables/' # Working for Yongsoo
+base_path <- 'C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/' # working for Erik
+image_check_path = NULL # working for Yongsoo (CHANGE)
+image_check_path <- 'C:/Users/erikb/Documents/Thesis - Local/spatstat_vectra/HO105 image check.xlsx' # working for Erik
+
+HO105_image_check <- read_excel(image_check_path)
+
+HOnrs_unfil = HO105_image_check$`HO105 nr`
+tumor_images_data_unfil = HO105_image_check$`Tumor images`
+
+# get the MSI's through regex finding: open bracket->MSI numbers->comma->MSI numbers-> closed bracket
+tumor_images_unfil = str_extract_all(tumor_images_data_unfil,"\\[[0-9]+,[0-9]+\\]")
+
+# create filter to check for non empty content
+non_empty = !sapply(tumor_images_unfil,is_empty)
+
+# create filtered tumor_images and HOnrs
+tumor_images = tumor_images_unfil[non_empty]
+
+HOnrs = HOnrs_unfil[non_empty]
+names(tumor_images) = HOnrs
+
+# create string with paths to tumor images to analyse
+combi = lapply(seq_along(HOnrs),function(x) paste0(names(tumor_images)[x],'_',unlist(tumor_images[HOnrs][x]),'_cell_seg_data.txt'))
+combi_str = unlist(combi)
+pathcombi = paste0(base_path, combi_str)
+
+# Plot variables
+
+plotter_sample = TRUE
+plotter_quadrat = TRUE
+plotter_alltypes = TRUE
+
+plotter_bools = list(plotter_sample, plotter_quadrat, plotter_alltypes)
+
+# Select spatial statistics, of NULL then all statistics are selected
+selected_options = NULL
+
+outputs = list()
+for (file in pathcombi){
+	print(paste('procesing', file))
+    
+	data = purrr::map_df(file, read_cell_seg_data, pixels_per_micron = getOption("phenoptr.pixels.per.micron"))
+    
+  	samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(file, '/')[[1]],1))
+	outputs[[samplename]] = do_analyse(Intable = data, PhenoOrder = phenotype_simple, ColsOrder = color_simple,
+                      XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype',
+                      sample_name = samplename, plotter = plotter_bools, fig.prefix = fig.prefix.simple, fig.width = 720, fig.height = 720,
+                      r_vec = r_vec, options = selected_options, envelope = TRUE)
+}
+
+
+
+M = feature_extract(outputs, fig.prefix.simple)
+
+```
+
+
+```{r marit HO105 image check  STDNR 3, fig.width=8, fig.height=8, eval=FALSE, echo=FALSE}
 library('stringi')
 source('spatstat_vectra.R')
 studynrs = c(3,5,6,10,18,20,23,25,29,33,36,40,42,45,46,48,57,59,60,61,62,65,70,73,75,79,80,81,83,85,87,89,95,96,97,98,101,104,106,107,111,113,116,117,120,121,123,124,126,127,128,130,132,135,136,137,138,139,140,141,145,146,149,150,153,156,158,159,160,165,169,170,171,174,176,179,180,181,182,183,184,186,189,191,194,195,196,199,202)
@@ -126,47 +190,4 @@ for (file in pathcombi){
 
 
 M = feature_extract(outputs, fig.prefix.simple)
-```
-
-```{r marit HO105 image check  STDNR 60, fig.width=8, fig.height=8}
-library('stringi')
-source('spatstat_vectra.R')
-
-
-# HO105-060
-HOnr = paste0('HO105-', '060') # Cases with almost no immune cell infiltrate: HO105-060, HO105-062, HO105-065, HO105-184
-
-tumor_images = c('[6798,47366]', '[9840,51007]', '[9966,49329]', '[10096,48980]', '[10432,49613]', '[19089,49960]', '[19134,52452]', '[19240,52103]', '[19619,49726]', '[19814,50933]', '[20215,51282]', '[20791,50292]')
-
-combi = paste0(HOnr, '_', tumor_images)
-pathcombi = paste0(base_path, combi,'_cell_seg_data.txt')
-
-# Plot variables
-
-plotter_sample = TRUE
-plotter_quadrat = TRUE
-plotter_alltypes = TRUE
-
-plotter_bools = list(plotter_sample, plotter_quadrat, plotter_alltypes)
-
-# Select spatial statistics, of NULL then all statistics are selected
-selected_options = NULL
-
-outputs = list()
-for (file in pathcombi){
-	print(paste('procesing', file))
-    
-	data = purrr::map_df(file, read_cell_seg_data, pixels_per_micron = getOption("phenoptr.pixels.per.micron"))
-    
-  	samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(file, '/')[[1]],1))
-	outputs[[samplename]] = do_analyse(Intable = data, PhenoOrder = phenotype_simple, ColsOrder = color_simple,
-                      XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype',
-                      sample_name = samplename, plotter = plotter_bools, fig.prefix = fig.prefix.simple, fig.width = 720, fig.height = 720,
-                      r_vec = r_vec, options = selected_options, envelope = TRUE)
-}
-
-
-
-M = feature_extract(outputs, fig.prefix.simple)
-
 ```
