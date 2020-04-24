@@ -47,21 +47,23 @@ fig.prefix.simple = './simple'
 ```
 
 
-```{r HO105_extreme, fig.width=8, fig.height=8}
-source('spatstat_vectra.R')
+```{r HO105_extreme} 
+source('spatstat_vectra.R') #fig.width=8, fig.height=8
 #base_path <- system.file("extdata", "samples", package = "phenoptrExamples")
 extreme = paste0(base_path, c(
 		'HO105-194_[16067,37856]_cell_seg_data.txt', # PD-L1 positive cluster + Tumor cluster
 		'HO105-194_[15564,37856]_cell_seg_data.txt', # PD-L1 positive cluster + Tumor cluster
 		'HO105-194_[16029,38205]_cell_seg_data.txt' # not clustered
 	))
-
+extreme = paste0(base_path, c(
+		'HO105-194_[16067,37856]_cell_seg_data.txt' # PD-L1 positive cluster + Tumor cluster
+	))
 
 # Plot variables
 
-plotter_sample = FALSE
-plotter_quadrat = FALSE
-plotter_alltypes = FALSE
+plotter_sample = TRUE
+plotter_quadrat = TRUE
+plotter_alltypes = TRUE
 
 plotter_bools = list(plotter_sample, plotter_quadrat, plotter_alltypes)
 

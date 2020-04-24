@@ -130,12 +130,13 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL,
     unitname(csd_ppp) = c("micron", "microns")
     
     if (plotter[1] == TRUE) {
-        
-        png(filename = paste0(file.path(output_dir, sample_name),".png"))
-        par(mar = c(0,2,0,0)+0.1)
-        plot(csd_ppp, cols = colors_phenotype[levels(csd_ppp$marks)], xlab = "", ylab = "", main = "", pch = 20)
-        title(paste("Location of cells and their phenotype\n in sample", sample_name), line = -5)
-        dev.off()
+      
+      png(filename = paste0(file.path(output_dir, sample_name),".png"))
+      par(mar=rep(0.5, 4))
+      #par(mar = c(0,2,0,0)+0.1)
+      plot(csd_ppp, cols = colors_phenotype[levels(csd_ppp$marks)], xlab = "", ylab = "", main = "", pch = 20)
+      title(paste("Location of cells and their phenotype\n in sample", sample_name), line = -3)
+      dev.off()
     }
     
     
@@ -150,42 +151,45 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL,
     
     
     
-
     
     # Make plots for the quadrat counts of each phenotype and pairwise plots for evaluating the pairwise stats
     
     quadratcount_X2statistic = list()
+    quadratcount_X2statistic_normed = list()
     amount_pheno = length(pheno_vector)
     
     for (counter1 in seq_along(pheno_vector)){
-        phenotype1 = pheno_vector[counter1]
-        sym_matrix_sequence = seq(counter1,seq_along(pheno_vector)[amount_pheno])
+      phenotype1 = pheno_vector[counter1]
+      sym_matrix_sequence = seq(counter1,seq_along(pheno_vector)[amount_pheno])
+      
+      for (counter2 in sym_matrix_sequence){
+        phenotype2 = pheno_vector[counter2]
         
-        for (counter2 in sym_matrix_sequence){
-            phenotype2 = pheno_vector[counter2]
-            
-            splitted = csd_ppp[(marks(csd_ppp) == phenotype1) | (marks(csd_ppp) == phenotype2)] # here somehow index out of bounds
-            
-            if (phenotype1 == phenotype2){
-                if (plotter[2] == TRUE){
-                    png(filename = paste0(file.path(output_dir, sample_name),"_quadratcounts_", phenotype1, ".png"))
-                    plot(splitted, cols = colors_phenotype[levels(csd_ppp$marks)], xlab = "", ylab = "", main = "",  pch = 20)
-                    plot(quadratcount(splitted), add = TRUE)
-                    title(paste("Quadratcounts of", phenotype1, "\n in sample", sample_name), line = -3)
-                    dev.off()
-                }
-                quadrattest = quadrat.test(splitted)
-                quadratcount_X2statistic[[phenotype1]] = quadrattest$statistic[['X2']]
-
-            }
-            if (plotter[2] == TRUE){
-                png(filename = paste0(file.path(output_dir, sample_name), phenotype1, "-", phenotype2, ".png"))
-                plot(splitted, cols = colors_phenotype[levels(csd_ppp$marks)], xlab = "", ylab = "", main = "",  pch = 20)
-                title(paste("Location of", phenotype1, "and", phenotype2, "\n in sample", sample_name), line = -3)
-                dev.off()
-            }
-            
+        splitted = csd_ppp[(marks(csd_ppp) == phenotype1) | (marks(csd_ppp) == phenotype2)] 
+        
+        if (phenotype1 == phenotype2){
+          if (plotter[2] == TRUE){
+            # plot quadratcounts and save
+            png(filename = paste0(file.path(output_dir, sample_name),"_quadratcounts_", phenotype1, ".png"))
+            par(mar=rep(0.5, 4))
+            plot(splitted, cols = colors_phenotype[levels(csd_ppp$marks)], xlab = "", ylab = "", main = "",  pch = 20)
+            plot(quadratcount(splitted), add = TRUE)
+            title(paste("Quadratcounts of", phenotype1, "\n in sample", sample_name), line = -3)
+            dev.off()
+            # plot singlephenotype and save
+            png(filename = paste0(file.path(output_dir, sample_name), '_', phenotype1, ".png"))
+            par(mar=rep(0.5, 4))
+            plot(splitted, cols = colors_phenotype[levels(csd_ppp$marks)], xlab = "", ylab = "", main = "",  pch = 20)
+            title(paste("Location of", phenotype1, "\n in sample", sample_name), line = -3)
+            dev.off()
+          }
+          # normal quadratcounts statistic and normalizing by the total amount of corresponding colour
+          
+          quadrattest = quadrat.test(splitted) 
+          quadratcount_X2statistic[[phenotype1]] = quadrattest$statistic[['X2']]
+          quadratcount_X2statistic_normed[[phenotype1]] = quadrattest$statistic[['X2']]/counts_sample[counter1] 
         }
+      }
     }
     
     
@@ -196,7 +200,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL,
     PhenoOrder = lapply(PhenoOrder, function(x) {gsub("+", "T", x, fixed = TRUE)})
     PhenoOrder = lapply(PhenoOrder, function(x) {gsub("-", "F", x, fixed = TRUE)})
     if (isTRUE(check_elsestate)){
-        names(PhenoOrder) = PhenoOrder
+      names(PhenoOrder) = PhenoOrder
     }
     
     
@@ -223,39 +227,43 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL,
     
     
     for (option in options){
+      
+      if (option %in% list("K","L","Kdot","Ldot","pcf")){  # (option == "K")|| (option == "L") || (option == "Kdot")|| (option == "Ldot") || (option == "pcf")){
+        all_types = alltypes(csd_ppp,fun = paste(option), dataname = sample_name, envelope = envelope_bool, correction = "iso")
+      } else {
+        all_types = alltypes(csd_ppp,fun = paste(option), dataname = sample_name, envelope = envelope_bool, correction = "km")
+      }
+      
+      all_types_options_sample_name[[option]] = all_types
+      
+      if (plotter[3] == TRUE){
+          
+        # if (option %in% list("G","J","K", "L","pcf")){ # (option == "K")|| (option == "L") || (option == "pcf")){
+        #     width = 800
+        #     height = 700
+        #     res = 80
+        # } else {
+        #     width = 800
+        #     height = 900
+        #     res = 80
+        # }
+        # 
+        # png(filename = paste0(file.path(output_dir, sample_name),"_statistic_",option,".png"),
+        #     width = width, height = height, res = res)
+        # plot(all_types, samex = TRUE, samey = TRUE)
+        # dev.off()
         
-        if (option %in% list("K","L","Kdot","Ldot","pcf")){  # (option == "K")|| (option == "L") || (option == "Kdot")|| (option == "Ldot") || (option == "pcf")){
-            all_types = alltypes(csd_ppp,fun = paste(option), dataname = sample_name, envelope = envelope_bool, correction = "iso")
-        } else {
-            all_types = alltypes(csd_ppp,fun = paste(option), dataname = sample_name, envelope = envelope_bool, correction = "km")
-        }
+        png(filename = paste0(file.path(output_dir, sample_name),"_statistic_",option,".png"))
+        par(mar=rep(0.5, 4))
+        plot(all_types, samex = TRUE, samey = TRUE)
+        dev.off()
+      }
         
-        
-        all_types_options_sample_name[[option]] = all_types
-        
-        if (plotter[3] == TRUE){
-            
-            if (option %in% list("G","J","K", "L","pcf")){ # (option == "K")|| (option == "L") || (option == "pcf")){
-                width = 800
-                height = 700
-                res = 80
-            } else {
-                width = 800
-                height = 900
-                res = 80
-            }
-            
-            png(filename = paste0(file.path(output_dir, sample_name),"_statistic_",option,".png"),
-                width = width, height = height, res = res)
-            plot(all_types, samex = TRUE, samey = TRUE)
-            dev.off()
-        }
-        
-        output = interpolate_r(all_types, r_vec, option, envelope_bool)
-        
-        
-        statistic_close_list[[option]] = output[[1]]
-        normalized_list[[option]] = output[[2]]
+      output = interpolate_r(all_types, r_vec, option, envelope_bool)
+      
+      
+      statistic_close_list[[option]] = output[[1]]
+      normalized_list[[option]] = output[[2]]
     }
     
     output_all = list()
@@ -264,6 +272,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL,
     output_all[["Area_sample"]] = Area_sample
     output_all[["density_sample"]] = density_sample
     output_all[["quadratcount_X2statistic"]] = quadratcount_X2statistic
+    output_all[["quadratcount_X2statistic_normed"]] = quadratcount_X2statistic_normed
     output_all[["MED_min"]] = MED_min
     output_all[["MED"]] = MED
     output_all[["MAD_min"]] = MAD_min
@@ -544,12 +553,14 @@ feature_extract <- function(outputs, mat_output_dir){
     counts = c()
     dens = c()
     X2stat = c()
+    X2stat_normed = c()
     
     # get phenotypes for counts and densities
     for (out in outputs) {
         counts = union(counts, names(out$counts_sample))
         dens = union(dens, names(out$density_sample))
         X2stat = union(X2stat, names(out$quadratcount_X2statistic))
+        X2stat_normed = union(X2stat_normed, names(out$quadratcount_X2statistic_normed))
     }
     
     # create a matrix for counts
@@ -564,6 +575,10 @@ feature_extract <- function(outputs, mat_output_dir){
     mat_X2stat = matrix(NA, nrow = length(X2stat), ncol = length(outputs),
                          dimnames = list(paste0('X2stat_sample_', sort(X2stat)), names(outputs)))
     
+    # create a matrix for Chi-squared normlized statistic of quadratcounts
+    mat_X2stat_normed = matrix(NA, nrow = length(X2stat_normed), ncol = length(outputs),
+                        dimnames = list(paste0('X2stat_normed_sample_', sort(X2stat_normed)), names(outputs)))
+    
     # fill matrices for counts and density
     for (i in seq_along(outputs)) {
         out = outputs[[i]]
@@ -571,10 +586,12 @@ feature_extract <- function(outputs, mat_output_dir){
         data_counts = out$counts_sample
         data_density = out$density_sample
         data_X2stat = out$quadratcount_X2statistic
+        data_X2stat_normed = out$quadratcount_X2statistic_normed
         for (featname in names(data_counts)){
           mat_counts[paste0('counts_sample_',featname),name] = data_counts[[featname]]
           mat_density[paste0('density_sample_',featname),name] = data_density[[featname]]
           mat_X2stat[paste0('X2stat_sample_',featname),name] = data_X2stat[[featname]]
+          mat_X2stat_normed[paste0('X2stat_normed_sample_',featname),name] = data_X2stat_normed[[featname]]
         }
     }
     
@@ -678,7 +695,7 @@ feature_extract <- function(outputs, mat_output_dir){
       }
     }
     
-    mat = t(rbind(mat_ripleys, mat_counts, mat_density, mat_X2stat,
+    mat = t(rbind(mat_ripleys, mat_counts, mat_density, mat_X2stat, mat_X2stat_normed,
                 mat_med_min, mat_med, mat_mad_min, mat_mad))
     
     
