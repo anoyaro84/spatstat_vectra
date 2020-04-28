@@ -130,10 +130,9 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL,
     unitname(csd_ppp) = c("micron", "microns")
     
     if (plotter[1] == TRUE) {
-        
         png(filename = paste0(file.path(output_dir, sample_name),".png"))
         par(mar = c(0,2,0,0)+0.1)
-        plot(csd_ppp, cols = colors_phenotype[levels(csd_ppp$marks)], xlab = "", ylab = "", main = "", pch = 20)
+        plot(csd_ppp, cols = unlist(colors_phenotype[levels(csd_ppp$marks)]), xlab = "", ylab = "", main = "", pch = 20)
         title(paste("Location of cells and their phenotype\n in sample", sample_name), line = -5)
         dev.off()
     }
@@ -169,7 +168,8 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL,
             if (phenotype1 == phenotype2){
                 if (plotter[2] == TRUE){
                     png(filename = paste0(file.path(output_dir, sample_name),"_quadratcounts_", phenotype1, ".png"))
-                    plot(splitted, cols = colors_phenotype[levels(csd_ppp$marks)], xlab = "", ylab = "", main = "",  pch = 20)
+                    plot(splitted, cols = unlist(colors_phenotype[levels(csd_ppp$marks)]), 
+                         xlab = "", ylab = "", main = "",  pch = 20)
                     plot(quadratcount(splitted), add = TRUE)
                     title(paste("Quadratcounts of", phenotype1, "\n in sample", sample_name), line = -3)
                     dev.off()
@@ -180,7 +180,8 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL,
             }
             if (plotter[2] == TRUE){
                 png(filename = paste0(file.path(output_dir, sample_name), phenotype1, "-", phenotype2, ".png"))
-                plot(splitted, cols = colors_phenotype[levels(csd_ppp$marks)], xlab = "", ylab = "", main = "",  pch = 20)
+                plot(splitted, cols = unlist(colors_phenotype[levels(csd_ppp$marks)]), 
+                     xlab = "", ylab = "", main = "",  pch = 20)
                 title(paste("Location of", phenotype1, "and", phenotype2, "\n in sample", sample_name), line = -3)
                 dev.off()
             }

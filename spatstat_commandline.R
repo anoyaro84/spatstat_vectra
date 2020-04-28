@@ -5,8 +5,10 @@ if (exists('snakemake')) { # if the script is used by snakemake
     infile = snakemake@input[["infile"]]
     outRDS = snakemake@output[["RDS"]]
     r_vec = as.numeric(strsplit(snakemake@params[["r_vec"]], split=',')[[1]])
-    pheno_vector_absolut = strsplit(snakemake@params[["phenotype"]], split=',')[[1]]
-    colors_absolut = strsplit(snakemake@params[["colors"]], split=',')[[1]]
+    #pheno_vector_absolut = strsplit(snakemake@params[["phenotype"]], split=',')[[1]]
+    pheno_vector_absolut = snakemake@params[["phenotype"]]
+    #colors_absolut = strsplit(snakemake@params[["colors"]], split=',')[[1]]
+    colors_absolut = snakemake@params[["colors"]]
     path_script = snakemake@params[["pathscript"]]
     path_figure = snakemake@params[["fig_prefix"]]
 }else {
@@ -42,10 +44,10 @@ data_with_distance = data %>%
 samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(infile, '/')[[1]],1))
 
 # perform analysis
-output = do_analyse(data_with_distance, pheno_vector_absolut, colors_absolut, 
-			NULL, plotter = c(TRUE, TRUE,TRUE),XposCol = 'Cell X Position', envelope=TRUE, 
+output = do_analyse(Intable=data_with_distance, PhenoOrder=pheno_vector_absolut, ColsOrder=colors_absolut, 
+			plotter = c(TRUE, TRUE,TRUE),XposCol = 'Cell X Position', envelope_bool=TRUE, 
 			fig.prefix = path_figure, fig.width = 720, fig.height = 720,
-			YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', samplename, r_vec = r_vec)
+			YposCol = 'Cell Y Position',PhenoCol = 'Phenotype', sample_name = samplename, r_vec = r_vec)
 
 
 # save outcome
