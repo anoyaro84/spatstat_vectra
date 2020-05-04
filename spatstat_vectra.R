@@ -1,20 +1,23 @@
 
-
-library(spatstat)
 library(tidyverse)
-library(phenoptr)
+library(spatstat)
 library(spdep)
+library(remotes)
+remotes::install_github("akoyabio/tiff")
+remotes::install_github("PerkinElmer/phenoptr", build_vignettes=TRUE)
+library(phenoptr)
 library(zoo)
 library(RColorBrewer)
-library(ggplot2)
 library(reshape2)
 library(latex2exp)
 
-# phenotype can be converted by the "phenotype argument".
-# why statistics was used as argument?
+
+
+
+
 do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL,
                        XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype',
-                       sample_name = NULL, plotter = c(FALSE,FALSE,FALSE), fig.prefix = '.', fig.width, fig.height,
+                       sample_name = 'Input sample', plotter = c(FALSE,FALSE,FALSE), fig.prefix = '.', fig.width, fig.height,
                        r_vec = NULL, options = NULL, envelope_bool = TRUE, ...) {
     
     
@@ -27,76 +30,58 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL,
     Intable$Phenotype[Intable$Phenotype == ""] = "Other"
     
     
-    if (is.null(sample_name)) {
-      sample_name = 'Input sample'
-    }
-    
-    
     check_elsestate = FALSE
     
     if (is.null(PhenoOrder)) {
-        PhenoOrder = unique(csd$Phenotype) # if no order is set, just take the order from data
+      PhenoOrder = unique(csd$Phenotype) # if no order is set, just take the order from data
+      pheno_vector = PhenoOrder
+      names(PhenoOrder) = PhenoOrder
+      ColsOrder = brewer.pal(length(PhenoOrder), 'Set1') 
+      
+      colors_phenotype = ColsOrder
+      names(colors_phenotype) = pheno_vector
+    } else {
+      if (!is.null(names(PhenoOrder))) {
+        for (pheno in names(PhenoOrder)) {
+          csd$Phenotype[csd$Phenotype %in% PhenoOrder[[pheno]]] = pheno
+          Intable$Phenotype[Intable$Phenotype %in% PhenoOrder[[pheno]]] = pheno
+        }
+        pheno_vector = unique(csd$Phenotype)
+      } else {
+        PhenoOrder = unique(csd$Phenotype)
         pheno_vector = PhenoOrder
         names(PhenoOrder) = PhenoOrder
-        ColsOrder = brewer.pal(length(PhenoOrder), 'Set1') 
+        ColsOrder = ColsOrder[names(ColsOrder) %in% PhenoOrder]
         
-        colors_phenotype = ColsOrder
-        names(colors_phenotype) = pheno_vector
-    }else {
-        if (!is.null(names(PhenoOrder))) {
-            # for (pheno_replace in names(PhenoOrder)) {
-            # 
-            #     pheno = PhenoOrder[names(PhenoOrder) == pheno_replace]
-            #     csd$Phenotype[csd$Phenotype %in% pheno]  = pheno_replace
-            #     Intable$Phenotype[Intable$Phenotype %in% pheno] = pheno_replace
-            # }
-            for (pheno in names(PhenoOrder)) {
-                csd$Phenotype[csd$Phenotype %in% PhenoOrder[[pheno]]] = pheno
-                Intable$Phenotype[Intable$Phenotype %in% PhenoOrder[[pheno]]] = pheno
-            }
-            pheno_vector = unique(csd$Phenotype)
-        } else{
-            
-            
-            PhenoOrder = unique(csd$Phenotype)
-            pheno_vector = PhenoOrder
-            names(PhenoOrder) = PhenoOrder
-            ColsOrder = ColsOrder[names(ColsOrder) %in% PhenoOrder]
-            
-            
-            check_elsestate = TRUE
-        }
-        colors_phenotype = ColsOrder
-        
+        check_elsestate = TRUE
+      }
+      colors_phenotype = ColsOrder
     }
 
-    if (TRUE %in% plotter){
-        output_dir <- file.path(fig.prefix, sample_name)
-        if (!dir.exists(output_dir)){
-            dir.create(output_dir, recursive = T)
-            print(paste("Directory created for", samplename, "with output directory", output_dir))
-        } else {
-            print(paste("Directory for ", samplename, "already exists with output directory", output_dir, "! Figures were overwritten."))
-        }
+    if (TRUE %in% plotter) {
+      output_dir <- file.path(fig.prefix, sample_name)
+      if (!dir.exists(output_dir)) {
+        dir.create(output_dir, recursive = T)
+        print(paste("Directory created for", samplename, "with output directory", output_dir))
+      } else {
+        print(paste("Directory for ", samplename, "already exists with output directory", output_dir, "! Figures were overwritten."))
+      }
     }
     
-    if (is.null(r_vec)){
-        dim_scale = min(max(csd[[XposCol]], max(csd[[YposCol]])))
-        r_vec = dim_scale*c(0.1,0.9)
-        # r_vec currently does not work well when given NULL due to several automated settings for the grid of r in the settings of each option
-        # ASSUMPTION
+    if (is.null(r_vec)) {
+      stop("Give at least one radius for parameter 'r_vec' to the function to start the analyse.")
     }
     
     
     options_all = list("G","F", "J","Gdot", "Jdot", "K", "L", "pcf", "Kdot", "Ldot")
     
     
-    if (is.null(options)){
-        options = options_all
-    } else if (all(options %in% options_all)){
-        options = options
-    } else{
-        stop("one or more spatial statistics in parameter 'options' are not correctly defined")
+    if (is.null(options)) {
+      options = options_all
+    } else if (all(options %in% options_all)) {
+      options = options
+    } else {
+      stop("One or more spatial statistics in parameter 'options' are not correctly defined")
     }
     
     
@@ -127,7 +112,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL,
     csd_ppp = ppp(x=csd[[XposCol]], y=csd[[YposCol]], 
                   window = owin(c(0, max(csd[[XposCol]])), c(0, max(csd[[YposCol]]))),
                   marks = factor(csd[[PhenoCol]], names(PhenoOrder)))
-    unitname(csd_ppp) = c("micron", "microns")
+    unitname(csd_ppp) = list("micron", "microns", 1)
     
     if (plotter[1] == TRUE) {
       
@@ -215,7 +200,7 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL,
     csd_ppp = ppp(x=csd[[XposCol]], y=csd[[YposCol]], 
                   window = owin(c(0, max(csd[[XposCol]])), c(0, max(csd[[YposCol]]))),
                   marks = factor(csd[[PhenoCol]], names(PhenoOrder)))
-    unitname(csd_ppp) = c("micron", "microns")
+    unitname(csd_ppp) = list("micron", "microns", 1)
     
     values_options = list()
     

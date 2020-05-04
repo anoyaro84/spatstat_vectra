@@ -12,9 +12,9 @@ source('spatstat_vectra.R')
 
 
 base_path <- '../Exported data tables/' # Working for Yongsoo
-base_path <- 'C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/' # working for Erik
-paths <- list_cell_seg_files(base_path)
-paste("There are", length(paths), "paths currently loaded")
+base_path <- 'C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/' # working for Erik
+paths_to_seg <- list_cell_seg_files(base_path)
+paste("There are", length(paths_to_seg), "segmentation paths currently loaded")
 
 
 phenotype_complete = c("CD163+PDL1-","CD163+PDL1+",
@@ -61,64 +61,120 @@ extreme = paste0(base_path, c(
 
 # Plot variables
 
-plotter_sample = TRUE
-plotter_quadrat = TRUE
-plotter_alltypes = TRUE
+plotter_sample = FALSE
+plotter_quadrat = FALSE
+plotter_alltypes = FALSE
 
 plotter_bools = list(plotter_sample, plotter_quadrat, plotter_alltypes)
 
 # Select spatial statistics, of NULL then all statistics are selected
 selected_options = NULL
 
-outputs = list()
+
+outputs_auto = list()
 for (file in extreme){
 	print(paste('procesing', file))
     
-	data = purrr::map_df(file, read_cell_seg_data, pixels_per_micron = getOption("phenoptr.pixels.per.micron"))
-    
+#     component_path = component_path = sub("_cell_seg_data.txt", "_component_data.tif", file)
+#     info = get_field_info(component_path)
+#     pixels_per_micron_file = 1/info$microns_per_pixel
+#	  data_getOption = purrr::map_df(file, read_cell_seg_data, pixels_per_micron = getOption("phenoptr.pixels.per.micron"),remove_units = FALSE)
+    data_auto = purrr::map_df(file, read_cell_seg_data, pixels_per_micron = "auto",remove_units = FALSE)
+	
+	
   	samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(file, '/')[[1]],1))
-	outputs[[samplename]] = do_analyse(Intable = data, PhenoOrder = phenotype_simple, ColsOrder = color_simple,
+	outputs_auto[[samplename]] = do_analyse(Intable = data_auto, PhenoOrder = phenotype_simple, ColsOrder = color_simple,
                       XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype',
                       sample_name = samplename, plotter = plotter_bools, fig.prefix = fig.prefix.simple, fig.width = 720, fig.height = 720,
                       r_vec = r_vec, options = selected_options, envelope = TRUE)
 }
 
 
-M = feature_extract(outputs, fig.prefix.simple)
+
+M_auto = feature_extract(outputs_auto, fig.prefix.simple)
 ```
 
 
 ```{r marit HO105 image check  all via import, fig.width=8, fig.height=8}
-library('stringi')
-library(readxl)
 source('spatstat_vectra.R')
+library('readxl')
 
+
+#### Preprocessing ####
+# Define path for all data
 base_path <- '../Exported data tables/' # Working for Yongsoo
-base_path <- 'C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/HO105_Exported data tables/' # working for Erik
+base_path <- 'C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/' # working for Erik
+# exported_data_path = 'HO105_Exported data tables/'
+# exported_data_full_path = paste0(base_path, exported_data_path)
+
+# define path for selected images by Marit
 image_check_path = NULL # working for Yongsoo (CHANGE)
 image_check_path <- 'C:/Users/erikb/Documents/Thesis - Local/spatstat_vectra/HO105 image check.xlsx' # working for Erik
 
+
+
+#### renaming segmentation and component files in directory with '_2_', '_3_' and '_4_' (replace with '_') ####
+all_files_x_ = list.files(base_path, pattern =  'HO105-',full.names = TRUE)
+new_names = str_replace_all(all_files_x_, pattern = '\\_1\\_|\\_2\\_|\\_3\\_|\\_4\\_|\\_5\\_|\\_6\\_', replacement = '\\_')
+
+warning(paste('file names have been renamed in the current directory',getwd()))
+rename_log = file.rename(all_files_x_, new_names)
+
+
+#### Read file for selected images by Marit ####
 HO105_image_check <- read_excel(image_check_path)
 
 HOnrs_unfil = HO105_image_check$`HO105 nr`
 tumor_images_data_unfil = HO105_image_check$`Tumor images`
-
 # get the MSI's through regex finding: open bracket->MSI numbers->comma->MSI numbers-> closed bracket
-tumor_images_unfil = str_extract_all(tumor_images_data_unfil,"\\[[0-9]+,[0-9]+\\]")
-
+tumor_images_unfil = str_extract_all(tumor_images_data_unfil,'\\[[0-9]+,[0-9]+\\]')
 # create filter to check for non empty content
 non_empty = !sapply(tumor_images_unfil,is_empty)
-
 # create filtered tumor_images and HOnrs
 tumor_images = tumor_images_unfil[non_empty]
-
 HOnrs = HOnrs_unfil[non_empty]
 names(tumor_images) = HOnrs
+# create string with paths to segmentation data and component data to analyse
+sample_names_marit = lapply(seq_along(HOnrs),function(x) paste0(names(tumor_images)[x],'_',unlist(tumor_images[HOnrs][x])))
+sample_names_marit_str = unlist(sample_names_marit)
+length(sample_names_marit_str)
 
-# create string with paths to tumor images to analyse
-combi = lapply(seq_along(HOnrs),function(x) paste0(names(tumor_images)[x],'_',unlist(tumor_images[HOnrs][x]),'_cell_seg_data.txt'))
-combi_str = unlist(combi)
-pathcombi = paste0(base_path, combi_str)
+
+
+#### check if the component data and segmentation data are one to one ####
+# # find all files of HO105
+# all_files = list.files(base_path, pattern =  'HO105-')
+
+## find all available component data of HO105
+available_comp_tif = list.files(base_path, pattern = '_component_data.tif')
+# find the sample names of all available component data
+available_comp = lapply(available_comp_tif, function(x) gsub('_component_data.tif','',x))
+available_comp_str = unlist(available_comp)
+length(available_comp_str)
+
+## find all available segmentation data of HO105
+available_seg_txt = list.files(base_path, pattern = '_cell_seg_data.txt')
+# find the sample names of the all available segmentation data
+available_seg = lapply(available_seg_txt, function(x) gsub('_cell_seg_data.txt','',x))
+available_seg_str = unlist(available_seg)
+length(available_seg_str)
+
+
+# take intersection to retrieve the matching names with the data from Marits file
+matching_names_marit = intersect(sample_names_marit_str,available_comp_str)
+length(matching_names_marit)
+
+# take the difference to retrieve the sample names of the missing component data
+diff_available_comp = setdiff(sample_names_marit_str,available_comp_str)
+length(diff_available_comp)
+
+#take set difference of names of actual available components and names of components of 
+diff_available_seg = setdiff(sample_names_marit_str,available_seg_str)
+length(diff_available_seg)
+
+stop()
+pathcombi = paste0(base_path,matching_names_marit,'_cell_seg_data.txt')
+
 
 # Plot variables
 
@@ -135,7 +191,7 @@ outputs = list()
 for (file in pathcombi){
 	print(paste('procesing', file))
     
-	data = purrr::map_df(file, read_cell_seg_data, pixels_per_micron = getOption("phenoptr.pixels.per.micron"))
+	data = purrr::map_df(file, read_cell_seg_data, pixels_per_micron = 'auto', remove_units = FALSE)
     
   	samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(file, '/')[[1]],1))
 	outputs[[samplename]] = do_analyse(Intable = data, PhenoOrder = phenotype_simple, ColsOrder = color_simple,
@@ -181,7 +237,7 @@ outputs = list()
 for (file in pathcombi){
 	print(paste('procesing', file))
     
-	data = purrr::map_df(file, read_cell_seg_data, pixels_per_micron = getOption("phenoptr.pixels.per.micron"))
+	data = purrr::map_df(file, read_cell_seg_data, pixels_per_micron = 'auto', remove_units = FALSE)
     
   	samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(file, '/')[[1]],1))
 	outputs[[samplename]] = do_analyse(Intable = data, PhenoOrder = phenotype_simple, ColsOrder = color_simple,
