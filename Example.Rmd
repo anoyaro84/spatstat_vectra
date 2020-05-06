@@ -12,7 +12,7 @@ source('spatstat_vectra.R')
 
 
 base_path <- '../Exported data tables/' # Working for Yongsoo
-base_path <- 'C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/' # working for Erik
+base_path <- path.expand('~/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping') # working for Erik
 paths_to_seg <- list_cell_seg_files(base_path)
 paste("There are", length(paths_to_seg), "segmentation paths currently loaded")
 
@@ -32,7 +32,7 @@ names(color_complete) = phenotype_complete
 
 fig.prefix.complete = './complete'
 
-r_vec = c(10,20)
+r_vec = c(30)
 
 
 phenotype_simple = list(Macrophage = c("CD163+PDL1-","CD163+PDL1+"),
@@ -47,51 +47,43 @@ fig.prefix.simple = './simple'
 ```
 
 
-```{r HO105_extreme} 
+```{r HO105_extreme,fig.width=8, fig.height=8} 
 source('spatstat_vectra.R') #fig.width=8, fig.height=8
 #base_path <- system.file("extdata", "samples", package = "phenoptrExamples")
-extreme = paste0(base_path, c(
+extreme = file.path(base_path, c(
 		'HO105-194_[16067,37856]_cell_seg_data.txt', # PD-L1 positive cluster + Tumor cluster
 		'HO105-194_[15564,37856]_cell_seg_data.txt', # PD-L1 positive cluster + Tumor cluster
 		'HO105-194_[16029,38205]_cell_seg_data.txt' # not clustered
 	))
-extreme = paste0(base_path, c(
+extreme = file.path(base_path, c(
 		'HO105-194_[16067,37856]_cell_seg_data.txt' # PD-L1 positive cluster + Tumor cluster
 	))
-
 # Plot variables
 
-plotter_sample = FALSE
-plotter_quadrat = FALSE
-plotter_alltypes = FALSE
+plotter_sample = TRUE
+plotter_quadrat = TRUE
+plotter_alltypes = TRUE
 
 plotter_bools = list(plotter_sample, plotter_quadrat, plotter_alltypes)
 
-# Select spatial statistics, of NULL then all statistics are selected
-selected_options = NULL
+# Select spatial statistics, or NULL then all inbuild spatial statistics are selected
+selected_spatstat_statistics = NULL
 
 
 outputs_auto = list()
 for (file in extreme){
 	print(paste('procesing', file))
-    
-#     component_path = component_path = sub("_cell_seg_data.txt", "_component_data.tif", file)
-#     info = get_field_info(component_path)
-#     pixels_per_micron_file = 1/info$microns_per_pixel
-#	  data_getOption = purrr::map_df(file, read_cell_seg_data, pixels_per_micron = getOption("phenoptr.pixels.per.micron"),remove_units = FALSE)
     data_auto = purrr::map_df(file, read_cell_seg_data, pixels_per_micron = "auto",remove_units = FALSE)
 	
 	
   	samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(file, '/')[[1]],1))
-	outputs_auto[[samplename]] = do_analyse(Intable = data_auto, PhenoOrder = phenotype_simple, ColsOrder = color_simple,
+	outputs_auto[[samplename]] = do_analyse(Intable = data_auto, PhenoOrder = phenotype_complete, ColsOrder = color_complete,
                       XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype',
-                      sample_name = samplename, plotter = plotter_bools, fig.prefix = fig.prefix.simple, fig.width = 720, fig.height = 720,
-                      r_vec = r_vec, options = selected_options, envelope = TRUE)
+                      sample_name = samplename, plotter = plotter_bools, fig.prefix = fig.prefix.complete,
+                      r_vec = r_vec, spatstat_statistics = selected_spatstat_statistics)
 }
 
-
-
-M_auto = feature_extract(outputs_auto, fig.prefix.simple)
+M_auto = feature_extract(outputs_auto, fig.prefix.complete)
 ```
 
 
@@ -103,22 +95,27 @@ library('readxl')
 #### Preprocessing ####
 # Define path for all data
 base_path <- '../Exported data tables/' # Working for Yongsoo
-base_path <- 'C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping/' # working for Erik
-# exported_data_path = 'HO105_Exported data tables/'
-# exported_data_full_path = paste0(base_path, exported_data_path)
+# base_path <- 'C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping' # working for Erik
+base_path = path.expand("~/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping")
 
 # define path for selected images by Marit
 image_check_path = NULL # working for Yongsoo (CHANGE)
 image_check_path <- 'C:/Users/erikb/Documents/Thesis - Local/spatstat_vectra/HO105 image check.xlsx' # working for Erik
+image_check_path <- path.expand('~/spatstat_vectra/HO105 image check.xlsx') # working for Erik
 
 
-
-#### renaming segmentation and component files in directory with '_2_', '_3_' and '_4_' (replace with '_') ####
+#### renaming all files in directory with '_1_', '_2_', '_3_' and '_4_' (replace with '_') ####
 all_files_x_ = list.files(base_path, pattern =  'HO105-',full.names = TRUE)
-new_names = str_replace_all(all_files_x_, pattern = '\\_1\\_|\\_2\\_|\\_3\\_|\\_4\\_|\\_5\\_|\\_6\\_', replacement = '\\_')
+names_with_x_ = list.files(base_path, pattern =  'HO105-[0-9]+_[0-9]_',full.names = TRUE)
 
-warning(paste('file names have been renamed in the current directory',getwd()))
-rename_log = file.rename(all_files_x_, new_names)
+if (length(names_with_x_)>0){
+    new_names = str_replace_all(all_files_x_, pattern = '_[0-9]_', replacement = '\\_')
+    warning(paste('file names have been renamed in the current directory',getwd()))
+    rename_log = file.rename(all_files_x_, new_names)
+}
+
+
+
 
 
 #### Read file for selected images by Marit ####
@@ -172,7 +169,7 @@ length(diff_available_comp)
 diff_available_seg = setdiff(sample_names_marit_str,available_seg_str)
 length(diff_available_seg)
 
-stop()
+
 pathcombi = paste0(base_path,matching_names_marit,'_cell_seg_data.txt')
 
 
@@ -185,7 +182,7 @@ plotter_alltypes = TRUE
 plotter_bools = list(plotter_sample, plotter_quadrat, plotter_alltypes)
 
 # Select spatial statistics, of NULL then all statistics are selected
-selected_options = NULL
+selected_spatstat_statistics = NULL
 
 outputs = list()
 for (file in pathcombi){
@@ -196,56 +193,12 @@ for (file in pathcombi){
   	samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(file, '/')[[1]],1))
 	outputs[[samplename]] = do_analyse(Intable = data, PhenoOrder = phenotype_simple, ColsOrder = color_simple,
                       XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype',
-                      sample_name = samplename, plotter = plotter_bools, fig.prefix = fig.prefix.simple, fig.width = 720, fig.height = 720,
-                      r_vec = r_vec, options = selected_options, envelope = TRUE)
+                      sample_name = samplename, plotter = plotter_bools, fig.prefix = fig.prefix.simple,
+                      r_vec = r_vec, spatstat_statistics = selected_spatstat_statistics)
 }
 
 
 
 M = feature_extract(outputs, fig.prefix.simple)
 
-```
-
-
-```{r marit HO105 image check  STDNR 3, fig.width=8, fig.height=8, eval=FALSE, echo=FALSE}
-library('stringi')
-source('spatstat_vectra.R')
-studynrs = c(3,5,6,10,18,20,23,25,29,33,36,40,42,45,46,48,57,59,60,61,62,65,70,73,75,79,80,81,83,85,87,89,95,96,97,98,101,104,106,107,111,113,116,117,120,121,123,124,126,127,128,130,132,135,136,137,138,139,140,141,145,146,149,150,153,156,158,159,160,165,169,170,171,174,176,179,180,181,182,183,184,186,189,191,194,195,196,199,202)
-studynrs0 = stri_pad_left(studynrs, pad = '0', width = 3)
-
-
-# HO105-003
-HOnr = paste0('HO105-', studynrs0[1])
-
-tumor_images = c('[10769,37002]', '[10810,36653]', '[11564,35679]', '[11808,35330]', '[12707,36558]', '[12737,35493]', '[13300,37102]', '[14396,36315]')
-
-combi = paste0(HOnr, '_', tumor_images)
-pathcombi = paste0(base_path, combi,'_cell_seg_data.txt')
-
-# Plot variables
-
-plotter_sample = TRUE
-plotter_quadrat = TRUE
-plotter_alltypes = TRUE
-
-plotter_bools = list(plotter_sample, plotter_quadrat, plotter_alltypes)
-
-# Select spatial statistics, of NULL then all statistics are selected
-selected_options = NULL
-
-outputs = list()
-for (file in pathcombi){
-	print(paste('procesing', file))
-    
-	data = purrr::map_df(file, read_cell_seg_data, pixels_per_micron = 'auto', remove_units = FALSE)
-    
-  	samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(file, '/')[[1]],1))
-	outputs[[samplename]] = do_analyse(Intable = data, PhenoOrder = phenotype_simple, ColsOrder = color_simple,
-                      XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype',
-                      sample_name = samplename, plotter = plotter_bools, fig.prefix = fig.prefix.simple, fig.width = 720, fig.height = 720,
-                      r_vec = r_vec, options = selected_options, envelope = TRUE)
-}
-
-
-M = feature_extract(outputs, fig.prefix.simple)
 ```
