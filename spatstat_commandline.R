@@ -32,22 +32,19 @@ print(file.path(path_script, 'spatstat_vectra.R'))
 source(file.path(path_script, 'spatstat_vectra.R'))
 
 
-# load data
+# procesing segmentation file
 print(paste('procesing', infile))
-
-data = purrr::map_df(infile, read_cell_seg_data, pixels_per_micron = "auto", remove_units = FALSE)
 
 # extract sample name
 samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(infile, '/')[[1]],1))
 
-# perform analysis
-output = do_analyse(Intable=data, PhenoOrder=pheno_vector_absolut, ColsOrder=colors_absolut, 
+# perform analysis on segmentation file
+output = do_analyse(segmentation_path = infile, PhenoOrder=pheno_vector_absolut, ColsOrder=colors_absolut, 
 			XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype',
 			sample_name = samplename, plotter = c(TRUE, TRUE,TRUE), fig.prefix = path_figure,
 			r_vec = r_vec, spatstat_statistics = NULL)
 
 
 # save outcome
-feature_extract(output, path_figure)
 saveRDS(output, outRDS)
 

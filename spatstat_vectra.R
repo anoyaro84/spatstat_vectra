@@ -14,20 +14,24 @@ library(latex2exp)
 
 
 
-#### function master: do analyse on the input inForm table ####
+#### function master: do analyse on the path to the file ####
 
-do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL,
+do_analyse <- function(segmentation_path, PhenoOrder = NULL, ColsOrder = NULL,
                        XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype',
                        sample_name = 'Input sample', plotter = c(FALSE,FALSE,FALSE), fig.prefix = '.',
                        r_vec = NULL, spatstat_statistics = NULL, ...) {
-
   
+  
+  # Create table with the right spatial dimensions such as described by the component file
+  Intable = purrr::map_df(segmentation_path, read_cell_seg_data, pixels_per_micron = "auto",remove_units = FALSE)
+  
+  # replace empty phenotype with "Other"
+  Intable$Phenotype[Intable$Phenotype == ""] = "Other"
+  
+  # define csd for ppp
   csd <- Intable[, c(PhenoCol, XposCol, YposCol)]
   colnames(csd) = c('Phenotype', 'Cell X Position',  'Cell Y Position')
   
-  # replace empty phenotype with "Other"
-  csd$Phenotype[csd$Phenotype == ""] = "Other"
-  Intable$Phenotype[Intable$Phenotype == ""] = "Other"
   
   
   check_elsestate = FALSE
@@ -239,23 +243,33 @@ do_analyse <- function(Intable, PhenoOrder = NULL, ColsOrder = NULL,
     normalized_list[[spatstat_statistic]] = output[[2]]
   }
   
-  #### gather the output of do_analyse in a list ####
-  output_all = list()
-  output_all[["csd_ppp"]] = csd_ppp
-  output_all[["counts_sample"]] = counts_sample
-  output_all[["Area_sample"]] = Area_sample
-  output_all[["density_sample"]] = density_sample
-  output_all[["quadratcount_X2statistic"]] = quadratcount_X2statistic
-  output_all[["quadratcount_X2statistic_normed"]] = quadratcount_X2statistic_normed
-  output_all[["MED_min"]] = MED_min
-  output_all[["MED"]] = MED
-  output_all[["MAD_min"]] = MAD_min
-  output_all[["MAD"]] = MAD
-  output_all[["statistic_close_list"]] = statistic_close_list
-  output_all[["normalized_list"]] = normalized_list
-  output_all[["all_types_spatstat_statistics_sample_name"]] = all_types_spatstat_statistics_sample_name
+  #### gather the output of the computations in a list ####
+  output_data_raw = list()
+  output_data_raw[["csd_ppp"]] = csd_ppp
+  output_data_raw[["counts_sample"]] = counts_sample
+  output_data_raw[["Area_sample"]] = Area_sample
+  output_data_raw[["density_sample"]] = density_sample
+  output_data_raw[["quadratcount_X2statistic"]] = quadratcount_X2statistic
+  output_data_raw[["quadratcount_X2statistic_normed"]] = quadratcount_X2statistic_normed
+  output_data_raw[["MED_min"]] = MED_min
+  output_data_raw[["MED"]] = MED
+  output_data_raw[["MAD_min"]] = MAD_min
+  output_data_raw[["MAD"]] = MAD
+  output_data_raw[["statistic_close_list"]] = statistic_close_list
+  output_data_raw[["normalized_list"]] = normalized_list
+  output_data_raw[["all_types_spatstat_statistics_sample_name"]] = all_types_spatstat_statistics_sample_name
   
-  return(output_all)
+  #### call feature_extract and output the prediction matrix ####
+  
+  output_data_matrix = feature_extract(output_data_raw)
+  
+  #### gather both the raw data and the predection matrix data for the output data of do_analyse ####
+  
+  output_data = list()
+  output_data[['output_data_raw']] = output_data_raw
+  output_data[['output_data_matrix']] = output_data_matrix
+  
+  return(output_data)
 }
 
 
@@ -404,7 +418,7 @@ interpolate_r <- function(all_types, r_vec, spatstat_statistic){
 }
 
 #### function features: feature extract function ####
-feature_extract <- function(outputs, mat_output_dir){
+feature_extract <- function(outputs){
   functions = c()
   rs = c()
   # get function names and rs
@@ -612,11 +626,6 @@ feature_extract <- function(outputs, mat_output_dir){
   
   mat = t(rbind(mat_ripleys, mat_counts, mat_density, mat_X2stat, mat_X2stat_normed,
               mat_med_min, mat_med, mat_mad_min, mat_mad))
-  
-  
-  # save matrix to csv for later inspection
-  
-  write.csv(mat,file = file.path(mat_output_dir, 'feature_matrix.csv'))
   
   
   return(mat)
