@@ -4,8 +4,8 @@ library(tidyverse)
 library(spatstat)
 library(spdep)
 library(remotes)
-remotes::install_github("akoyabio/tiff")
-remotes::install_github("PerkinElmer/phenoptr", build_vignettes=TRUE)
+#remotes::install_github("akoyabio/tiff")
+#remotes::install_github("PerkinElmer/phenoptr", build_vignettes=TRUE)
 library(phenoptr)
 library(zoo)
 library(RColorBrewer)
@@ -261,15 +261,15 @@ do_analyse <- function(segmentation_path, PhenoOrder = NULL, ColsOrder = NULL,
   
   #### call feature_extract and output the prediction matrix ####
   
-  output_data_matrix = feature_extract(output_data_raw)
+#  output_data_matrix = feature_extract(output_data_raw)
   
   #### gather both the raw data and the predection matrix data for the output data of do_analyse ####
   
-  output_data = list()
-  output_data[['output_data_raw']] = output_data_raw
-  output_data[['output_data_matrix']] = output_data_matrix
+#  output_data = list()
+#  output_data[['output_data_raw']] = output_data_raw
+#  output_data[['output_data_matrix']] = output_data_matrix
   
-  return(output_data)
+  return(output_data_raw)
 }
 
 
@@ -453,7 +453,8 @@ feature_extract <- function(outputs){
   
   mat_ripleys = matrix(NA, nrow = length(allfeat_flat), ncol = length(outputs),
                dimnames = list(sort(allfeat_flat), names(outputs)))
-  
+ 
+  print('this far')
   # fill matrix
   for (i in seq_along(outputs)) {
     out = outputs[[i]]
