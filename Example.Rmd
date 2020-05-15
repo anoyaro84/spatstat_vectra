@@ -14,7 +14,7 @@ source('spatstat_vectra.R')
 base_path <- '../Exported data tables/' # Working for Yongsoo
 base_path <- path.expand('~/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping') # working for Erik
 paths_to_seg <- list_cell_seg_files(base_path)
-paste("There are", length(paths_to_seg), "segmentation paths currently loaded")
+cat("There are", length(paths_to_seg), "segmentation paths currently loaded")
 
 
 phenotype_complete = c("CD163+PDL1-","CD163+PDL1+",
@@ -48,38 +48,74 @@ fig.prefix.simple = './simple'
 
 
 ```{r HO105_extreme,fig.width=8, fig.height=8} 
-source('spatstat_vectra.R') #fig.width=8, fig.height=8
-#base_path <- system.file("extdata", "samples", package = "phenoptrExamples")
+source('spatstat_vectra.R')
+
 extreme = file.path(base_path, c(
 		'HO105-194_[16067,37856]_cell_seg_data.txt', # PD-L1 positive cluster + Tumor cluster
 		'HO105-194_[15564,37856]_cell_seg_data.txt', # PD-L1 positive cluster + Tumor cluster
 		'HO105-194_[16029,38205]_cell_seg_data.txt' # not clustered
 	))
-extreme = file.path(base_path, c(
-		'HO105-194_[16067,37856]_cell_seg_data.txt' # PD-L1 positive cluster + Tumor cluster
+D = file.path(base_path, c(
+        'HO105-006_[9554,40992]_cell_seg_data.txt',  # complete and simple: no component (not in marits file) 1
+        'HO105-006_[10041,41957]_cell_seg_data.txt', # complete and simple: no component (not in marits file) 2
+		'HO105-140_[16281,41985]_cell_seg_data.txt', # complete: Fest spacing  3 inside alltypes(..,fun=J) small counts 5,1
+		'HO105-083_[20512,33844]_cell_seg_data.txt', # simple: (maybe counts) 4 inside alltypes no Tcells solved
+		'HO105-083_[18166,32820]_cell_seg_data.txt', # simple: (maybe counts) 5 inside alltypes no Tcells solved
+		'HO105-097_[9517,43652]_cell_seg_data.txt',  # simple: (maybe counts) 6 inside alltypes no Tcells solved
+		'HO105-097_[8938,43999]_cell_seg_data.txt',  # simple: (maybe counts) 7 inside alltypes no Tcells solved
+		'HO105-097_[11295,45384]_cell_seg_data.txt', # simple: (maybe counts) 8 inside alltypes no Tcells solved
+		'HO105-121_[8016,47627]_cell_seg_data.txt',  # complete: Fest spacing 9 inside alltypes(..,fun=J) small counts 5,2
+		'HO105-083_[20684,34346]_cell_seg_data.txt', # simple: (maybe counts) 10 inside alltypes no Tcells solved
+		'HO105-083_[14332,34366]_cell_seg_data.txt', # simple: (maybe counts) 11 inside alltypes no Tcells solved
+		'HO105-083_[14941,33993]_cell_seg_data.txt', # simple: (maybe counts) 12 inside alltypes no Tcells solved
+		'HO105-083_[18456,34691]_cell_seg_data.txt', # simple: (maybe counts) 13 inside alltypes no Tcells solved
+		'HO105-083_[15677,36542]_cell_seg_data.txt', # simple: (maybe counts) 14 inside alltypes no Tcells solved
+		'HO105-083_[15726,34331]_cell_seg_data.txt', # simple: (maybe counts) 15 inside alltypes no Tcells solved
+		'HO105-095_[15101,39877]_cell_seg_data.txt', # complete: Fest spacing 16 inside alltypes(..,fun=J) small counts 5,1 maybe area is to thin?
+		'HO105-083_[16066,33773]_cell_seg_data.txt', # simple: (maybe counts) 17 inside alltypes no Tcells solved
+		'HO105-083_[16367,35783]_cell_seg_data.txt'  # simple: (maybe counts) 18 inside alltypes no Tcells solved
 	))
+extreme = D
 # Plot variables
 
 plotter_sample = TRUE
 plotter_quadrat = TRUE
 plotter_alltypes = TRUE
 
-plotter_bools = list(plotter_sample, plotter_quadrat, plotter_alltypes)
+plotter = list(plotter_sample, plotter_quadrat, plotter_alltypes)
 
 # Select spatial statistics, or NULL then all inbuild spatial statistics are selected
-selected_spatstat_statistics = NULL
+selected_spatstat_statistics = list('J')
 
+# debug
+
+extreme = D[16]
+samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(extreme, '/')[[1]],1))
+seg_path = extreme
+PhenoOrder = phenotype_simple
+ColsOrder = color_simple
+XposCol = 'Cell X Position'
+YposCol = 'Cell Y Position'
+PhenoCol = 'Phenotype'
+sample_name = samplename
+plotter = plotter
+fig.prefix = fig.prefix.simple
+r_vec = r_vec
+spatstat_statistics = selected_spatstat_statistics
 
 outputs_auto = list()
 for (file in extreme){
-	print(paste('procesing', file))
+	cat('processing', file)
     
   	samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(file, '/')[[1]],1))
-	outputs_auto[[samplename]] = do_analyse(segmentation_path = file, PhenoOrder = phenotype_complete, ColsOrder = color_complete,
+	outputs_auto[[samplename]] = do_analyse(seg_path = file, PhenoOrder = phenotype_simple, ColsOrder = color_simple,
                       XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype',
-                      sample_name = samplename, plotter = plotter_bools, fig.prefix = fig.prefix.complete,
+                      sample_name = samplename, plotter = plotter, fig.prefix = fig.prefix.simple,
                       r_vec = r_vec, spatstat_statistics = selected_spatstat_statistics)
 }
+# M_auto = feature_extract(outputs_auto, fig.prefix.simple)
+M = feature_extract(outputs = outputs_auto)
+write.csv(x = M,file = file.path(fig.prefix.simple, 'feature_matrix.csv'))
 ```
 
 
@@ -175,7 +211,7 @@ plotter_sample = TRUE
 plotter_quadrat = TRUE
 plotter_alltypes = TRUE
 
-plotter_bools = list(plotter_sample, plotter_quadrat, plotter_alltypes)
+plotter = list(plotter_sample, plotter_quadrat, plotter_alltypes)
 
 # Select spatial statistics, of NULL then all statistics are selected
 selected_spatstat_statistics = NULL
@@ -185,9 +221,9 @@ for (file in pathcombi){
 	print(paste('procesing', file))
     
   	samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(file, '/')[[1]],1))
-	outputs[[samplename]] = do_analyse(segmentation_path = file, PhenoOrder = phenotype_simple, ColsOrder = color_simple,
+	outputs[[samplename]] = do_analyse(seg_path = file, PhenoOrder = phenotype_simple, ColsOrder = color_simple,
                       XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype',
-                      sample_name = samplename, plotter = plotter_bools, fig.prefix = fig.prefix.simple,
+                      sample_name = samplename, plotter = plotter, fig.prefix = fig.prefix.simple,
                       r_vec = r_vec, spatstat_statistics = selected_spatstat_statistics)
 }
 ```

@@ -4,10 +4,9 @@ library(tidyverse)
 library(spatstat)
 library(spdep)
 library(remotes)
-#remotes::install_github("akoyabio/tiff")
-#remotes::install_github("PerkinElmer/phenoptr", build_vignettes=TRUE)
+library(tiff)
 library(phenoptr)
-library(zoo)
+# library(zoo)
 library(RColorBrewer)
 library(reshape2)
 library(latex2exp)
@@ -16,14 +15,14 @@ library(latex2exp)
 
 #### function master: do analyse on the path to the file ####
 
-do_analyse <- function(segmentation_path, PhenoOrder = NULL, ColsOrder = NULL,
+do_analyse <- function(seg_path, PhenoOrder = NULL, ColsOrder = NULL,
                        XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype',
                        sample_name = 'Input sample', plotter = c(FALSE,FALSE,FALSE), fig.prefix = '.',
                        r_vec = NULL, spatstat_statistics = NULL, ...) {
   
   
   # Create table with the right spatial dimensions such as described by the component file
-  Intable = purrr::map_df(segmentation_path, read_cell_seg_data, pixels_per_micron = "auto",remove_units = FALSE)
+  Intable = purrr::map_df(seg_path, read_cell_seg_data, pixels_per_micron = "auto",remove_units = FALSE)
   
   # replace empty phenotype with "Other"
   Intable$Phenotype[Intable$Phenotype == ""] = "Other"
@@ -31,7 +30,6 @@ do_analyse <- function(segmentation_path, PhenoOrder = NULL, ColsOrder = NULL,
   # define csd for ppp
   csd <- Intable[, c(PhenoCol, XposCol, YposCol)]
   colnames(csd) = c('Phenotype', 'Cell X Position',  'Cell Y Position')
-  
   
   
   check_elsestate = FALSE
@@ -62,18 +60,25 @@ do_analyse <- function(segmentation_path, PhenoOrder = NULL, ColsOrder = NULL,
     colors_phenotype = ColsOrder
   }
   
+  missing_in_data = setdiff(names(PhenoOrder),pheno_vector)
+  if (!is_empty(missing_in_data)){
+    warning(paste('Target phenotype', missing_in_data, 'is missing in the data sample\n'))
+  }
+  
+  
+  
   if (TRUE %in% plotter) {
     output_dir <- file.path(fig.prefix, sample_name)
     if (!dir.exists(output_dir)) {
       dir.create(output_dir, recursive = T)
-      print(paste("Directory created for", samplename, "with output directory", output_dir))
+      cat("Directory created for", samplename, "with output directory", output_dir, fill = TRUE)
     } else {
-      print(paste("Directory for ", samplename, "already exists with output directory", output_dir, "! Figures were overwritten."))
+      warning("Directory for ", samplename, "already exists with output directory", output_dir, "! Figures were possibly overwritten.\n")
     }
   }
   
   if (is.null(r_vec)) {
-    stop("Give at least one radius for parameter 'r_vec' to the function to start the analyse.")
+    stop("Give at least one radius for parameter 'r_vec' to the function to start the analyse.\n")
   }
   
   
@@ -94,13 +99,13 @@ do_analyse <- function(segmentation_path, PhenoOrder = NULL, ColsOrder = NULL,
   # Create Intable with nearest distances for each phenotype, here after the substitution of "" to "Other" and Simplyfying the Phenotypes
   Intable_with_distance = Intable %>%
       do(bind_cols(., find_nearest_distance(.)))
-  print(paste0("dimensions of the data with distances is ", dim(Intable_with_distance)[1], " times ", dim(Intable_with_distance)[2]))
+  cat("dimensions of the data with distances is ", dim(Intable_with_distance)[1], " times ", dim(Intable_with_distance)[2], fill = TRUE)
   
   # generate pairwise distance matrix for csd for use in getMAD
   pairwise_distance = distance_matrix(csd)
   
   # call getMAD function
-  output = getMAD(Intable_with_distance, pairwise_distance, pheno_vector)
+  output = getMAD(Intable_with_distance, pairwise_distance, pheno_vector, missing_in_data)
   MED_min = output[[1]]
   MED = output[[2]]
   MAD_min = output[[3]]
@@ -111,11 +116,12 @@ do_analyse <- function(segmentation_path, PhenoOrder = NULL, ColsOrder = NULL,
   
   csd_ppp = ppp(x=csd[[XposCol]], y=csd[[YposCol]], 
                 window = owin(c(min(csd[[XposCol]]), max(csd[[XposCol]])), c(min(csd[[YposCol]]), max(csd[[YposCol]]))),
-                marks = factor(csd[[PhenoCol]], names(PhenoOrder)))
+                marks = factor(x = csd[[PhenoCol]], levels = pheno_vector)) #sort? pheno_vector[order(match(pheno_vector,names(PhenoOrder)))]
+                # marks = factor(x = csd[[PhenoCol]], levels = names(PhenoOrder))) #sort? names(PhenoOrder)[order(match(names(PhenoOrder),pheno_vector))]
   unitname(csd_ppp) = list("micron", "microns", 1)
   
   
-  if (isTRUE(plotter[1])) {
+  if (isTRUE(plotter[[1]])) {
     
     png(filename = paste0(file.path(output_dir, sample_name),".png"), width = 600, height = 480)
     par(mar=rep(0.5, 4))
@@ -126,13 +132,20 @@ do_analyse <- function(segmentation_path, PhenoOrder = NULL, ColsOrder = NULL,
   
   
   ##### normal statistics: Counts and Density ####
-  Area_sample = summary(csd_ppp)$window$area
-  output = getDensity(csd, pheno_vector, Area_sample)
   
-  counts_sample = output[[1]]
-  density_sample = output[[2]]
+  counts_sample = summary(csd_ppp)$marks[['frequency']]
+  names(counts_sample) = levels(marks(csd_ppp))
+  
+  density_sample = summary(csd_ppp)$marks[['intensity']]
+  names(density_sample) = levels(marks(csd_ppp))
   
   
+  # if (!is_empty(missing_in_data)){
+  #   for (missing_pheno in missing_in_data){
+  #     counts_sample[[missing_pheno]] = NA
+  #     density_sample[[missing_pheno]] = NA
+  #   }
+  # }
   
   
   ##### normal statistics: Chi-squared statistics and quadratcount plot####
@@ -159,7 +172,7 @@ do_analyse <- function(segmentation_path, PhenoOrder = NULL, ColsOrder = NULL,
         quadratcount_X2statistic[[phenotype1]] = quadrattest$statistic[['X2']]
         quadratcount_X2statistic_normed[[phenotype1]] = quadrattest$statistic[['X2']]/counts_sample[[phenotype1]]
         
-        if (isTRUE(plotter[2])){
+        if (isTRUE(plotter[[2]])){
           # plot quadratcounts for single phenotype and save in output directory
           png(filename = paste0(file.path(output_dir, sample_name),"_quadratcounts_", phenotype1, ".png"), width = 600, height = 480)
           par(mar=rep(0.5, 4))
@@ -175,10 +188,10 @@ do_analyse <- function(segmentation_path, PhenoOrder = NULL, ColsOrder = NULL,
           title(paste("Location of", phenotype1, "\n in sample", sample_name), line = -3)
           dev.off()
         }
-      } else if (isTRUE(plotter[2])){
+      } else if (isTRUE(plotter[[2]])){
         # plot pairwise phenotypes and save in output directory
         png(filename = paste0(file.path(output_dir, sample_name), '_', phenotype1, '_', phenotype2, ".png"), width = 600, height = 480)
-        par(mar=rep(0.5, 4))
+        par(mar=rep(0.5, 4)) # mar.panel=c(2,1,1,2)
         plot(splitted, cols = unlist(colors_phenotype[levels(csd_ppp$marks)]), xlab = "", ylab = "", main = "",  pch = 20)
         title(paste("Location of", phenotype1, "and", phenotype2, "\n in sample", sample_name), line = -3)
         dev.off()
@@ -186,7 +199,14 @@ do_analyse <- function(segmentation_path, PhenoOrder = NULL, ColsOrder = NULL,
     }
   }
   
+  # if (!is_empty(missing_in_data)){
+  #   for (missing_pheno in missing_in_data){
+  #     quadratcount_X2statistic[[missing_pheno]] = NA
+  #     quadratcount_X2statistic_normed[[missing_pheno]] = NA
+  #   }
+  # }
   
+  # browser()
   #### Replace "+" with "T" and "-" with "F" in all variables for correct functioning of extracting inbuild statistics ####
   
   PhenoOrder = lapply(PhenoOrder, function(x) {gsub("+", "T", x, fixed = TRUE)})
@@ -198,12 +218,16 @@ do_analyse <- function(segmentation_path, PhenoOrder = NULL, ColsOrder = NULL,
   pheno_vector = gsub("+", "T", pheno_vector, fixed = TRUE)
   pheno_vector = gsub("-", "F", pheno_vector, fixed = TRUE)
   
+  missing_in_data = gsub("+", "T", missing_in_data, fixed = TRUE)
+  missing_in_data = gsub("-", "F", missing_in_data, fixed = TRUE)
+  
   csd$Phenotype = sapply(csd$Phenotype, function(x) {gsub("+", "T", x, fixed = TRUE)})
   csd$Phenotype = sapply(csd$Phenotype, function(x) {gsub("-", "F", x, fixed = TRUE)})
   
   csd_ppp = ppp(x=csd[[XposCol]], y=csd[[YposCol]], 
                 window = owin(c(min(csd[[XposCol]]), max(csd[[XposCol]])), c(min(csd[[YposCol]]), max(csd[[YposCol]]))),
-                marks = factor(csd[[PhenoCol]], names(PhenoOrder)))
+                marks = factor(x = csd[[PhenoCol]], levels = pheno_vector)) #sort?
+                # marks = factor(x = csd[[PhenoCol]], levels = names(PhenoOrder))) #sort?
   unitname(csd_ppp) = list("micron", "microns", 1)
   
   
@@ -214,20 +238,23 @@ do_analyse <- function(segmentation_path, PhenoOrder = NULL, ColsOrder = NULL,
   statistic_close_list = list()
   normalized_list = list()
   
+  
   #### compute inbuild statistics with statistic-dependent correction-method ####
   for (spatstat_statistic in spatstat_statistics){
     
+    cat('computing', spatstat_statistic, 'of alltypes', fill = TRUE)
+    
     if (spatstat_statistic %in% list("K","L","Kdot","Ldot","pcf")){
-      all_types = alltypes(csd_ppp,fun = paste(spatstat_statistic), correction = "iso", dataname = sample_name, envelope = TRUE)
+      all_types = alltypes(csd_ppp,fun = paste(spatstat_statistic), correction = "iso", dataname = sample_name, envelope = TRUE, verb = TRUE)
     } else {
-      all_types = alltypes(csd_ppp,fun = paste(spatstat_statistic), correction = "km", dataname = sample_name, envelope = TRUE)
+      all_types = alltypes(csd_ppp,fun = paste(spatstat_statistic), correction = "km", dataname = sample_name, envelope = TRUE, verb = TRUE)
     }
     
     # save object for debugging
     all_types_spatstat_statistics_sample_name[[spatstat_statistic]] = all_types
     
     # plot computation of inbuild statistic and save in output directory
-    if (isTRUE(plotter[3])){
+    if (isTRUE(plotter[[3]])){
       
       png(filename = paste0(file.path(output_dir, sample_name),"_statistic_",spatstat_statistic,".png"), width = 720, height = 720)
       par(mar=rep(0.5, 4))
@@ -247,7 +274,7 @@ do_analyse <- function(segmentation_path, PhenoOrder = NULL, ColsOrder = NULL,
   output_data_raw = list()
   output_data_raw[["csd_ppp"]] = csd_ppp
   output_data_raw[["counts_sample"]] = counts_sample
-  output_data_raw[["Area_sample"]] = Area_sample
+  # output_data_raw[["Area_sample"]] = Area_sample
   output_data_raw[["density_sample"]] = density_sample
   output_data_raw[["quadratcount_X2statistic"]] = quadratcount_X2statistic
   output_data_raw[["quadratcount_X2statistic_normed"]] = quadratcount_X2statistic_normed
@@ -274,11 +301,15 @@ do_analyse <- function(segmentation_path, PhenoOrder = NULL, ColsOrder = NULL,
 
 
 #### function normal statistic: Median and Median Absolute Deviation ####
-getMAD <- function(data_with_distance, pairwise_distances, pheno_vector){
+getMAD <- function(data_with_distance, pairwise_distances, pheno_vector, missing_in_data){
   
-  MED = matrix(NA , nrow = length(pheno_vector), ncol = length(pheno_vector))
-  colnames(MED) = pheno_vector
-  rownames(MED) = pheno_vector
+  # phenos = c(pheno_vector, missing_in_data)
+  phenos = pheno_vector
+  dim_square = length(phenos)
+  
+  MED = matrix(NA , nrow = dim_square, ncol = dim_square)
+  colnames(MED) = phenos
+  rownames(MED) = phenos
   
   MAD = MED
   MED_min = MED
@@ -307,23 +338,23 @@ getMAD <- function(data_with_distance, pairwise_distances, pheno_vector){
   return(list(MED_min, MED, MAD_min, MAD))
 }
 
-#### function normal statistic: Counts and density ####
-getDensity <- function(data, pheno_vector, Area_sample){
-  
-  counts_sample = rep(0,length(pheno_vector))
-  names(counts_sample) = pheno_vector
-  
-  density_sample = rep(0,length(pheno_vector))
-  names(density_sample) = pheno_vector
-  
-  for (phenotype in pheno_vector){
-    n = dim(data %>% filter(`Phenotype` == phenotype))[1]
-    counts_sample[[phenotype]] = n
-    density_sample[[phenotype]] = n / Area_sample
-  }
-  
-  return(list(counts_sample, density_sample))
-}
+# #### function normal statistic: Counts and density ####
+# getDensity <- function(data, pheno_vector, Area_sample){
+#   
+#   counts_sample = rep(0,length(pheno_vector))
+#   names(counts_sample) = pheno_vector
+#   
+#   density_sample = rep(0,length(pheno_vector))
+#   names(density_sample) = pheno_vector
+#   
+#   for (phenotype in pheno_vector){
+#     n = dim(data %>% filter(`Phenotype` == phenotype))[1]
+#     counts_sample[[phenotype]] = n
+#     density_sample[[phenotype]] = n / Area_sample
+#   }
+#   
+#   return(list(counts_sample, density_sample))
+# }
 
 #### function interpolate spatial statistic: interpolate the (normalized) statistic value for the user-defined radi in r_vec ####
 interpolate_r <- function(all_types, r_vec, spatstat_statistic){
@@ -331,7 +362,7 @@ interpolate_r <- function(all_types, r_vec, spatstat_statistic){
   statistic_close_list = list()
   normalized_list = list()
   
-  print(paste('interpolating',spatstat_statistic))
+  cat('interpolating',spatstat_statistic, fill = TRUE)
   
   # loop over every radius
   for (r_i in r_vec){
@@ -344,6 +375,8 @@ interpolate_r <- function(all_types, r_vec, spatstat_statistic){
       
       statistic_pairwise_phenotypes =  all_types[["fns"]][[index_pairwise]]
       r_emperic = statistic_pairwise_phenotypes[["r"]]
+      
+      # browser()
       
       # find the surrounding r values for the user defined radius
       dif = r_emperic - r_i
@@ -414,11 +447,15 @@ interpolate_r <- function(all_types, r_vec, spatstat_statistic){
       normalized_list[[paste("radius", r_i)]][[paste(spatstat_statistic, "fns which",index_pairwise)]] = normalized
     }
   }
+  # cat('done interpolating',spatstat_statistic, fill = TRUE)
   return(list(statistic_close_list, normalized_list))
 }
 
 #### function features: feature extract function ####
 feature_extract <- function(outputs){
+  
+  cat('begin feature extraction', fill = TRUE)
+  
   functions = c()
   rs = c()
   # get function names and rs
@@ -454,7 +491,7 @@ feature_extract <- function(outputs){
   mat_ripleys = matrix(NA, nrow = length(allfeat_flat), ncol = length(outputs),
                dimnames = list(sort(allfeat_flat), names(outputs)))
  
-  print('this far')
+  
   # fill matrix
   for (i in seq_along(outputs)) {
     out = outputs[[i]]
@@ -625,9 +662,10 @@ feature_extract <- function(outputs){
     }
   }
   
-  mat = t(rbind(mat_ripleys, mat_counts, mat_density, mat_X2stat, mat_X2stat_normed,
-              mat_med_min, mat_med, mat_mad_min, mat_mad))
+  mat = t(rbind(mat_counts, mat_density, mat_X2stat, mat_X2stat_normed,
+              mat_med_min, mat_med, mat_mad_min, mat_mad, mat_ripleys))
   
+  cat('end feature extraction')
   
   return(mat)
 }
