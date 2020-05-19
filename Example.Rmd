@@ -78,18 +78,18 @@ D = file.path(base_path, c(
 # extreme = D
 # Plot variables
 
-plotter_sample = TRUE
-plotter_quadrat = TRUE
-plotter_alltypes = TRUE
+plotter_sample = F
+plotter_quadrat = F
+plotter_alltypes = T
 
 plotter = list(plotter_sample, plotter_quadrat, plotter_alltypes)
 
 # Select spatial statistics, or NULL then all inbuild spatial statistics are selected
-selected_spatstat_statistics = NULL
+selected_spatstat_statistics = list('F')
 
 # debug
 
-# extreme = D[8]
+extreme = D[8]
 # extreme = c(extreme[3],D[8])
 samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(extreme, '/')[[1]],1))
 seg_path = extreme

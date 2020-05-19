@@ -160,22 +160,15 @@ do_analyse <- function(seg_path, PhenoOrder = NULL, ColsOrder = NULL,
   
   for (counter1 in seq_along(phenos)){
     phenotype1 = phenos[counter1]
-    
-    # use the symmetry of pairwise phenotypes and the inverse symmetry of the features for efficient loop
-    sym_matrix_sequence = seq(counter1,seq_along(phenos)[dim_square])
-    
-    for (counter2 in sym_matrix_sequence){
+    for (counter2 in seq_along(phenos)){
       phenotype2 = phenos[counter2]
       
-      if (phenotype1 %in% missing_in_data | phenotype2 %in% missing_in_data){
+      if (phenotype2 %in% missing_in_data){
         counts_pairwise[phenotype1,phenotype2] = NA
+      } else if (phenotype1 %in% missing_in_data){
+        counts_pairwise[phenotype1,phenotype2] = 0
       } else{
-        if (phenotype1 == phenotype2){
-          counts_pairwise[phenotype1,phenotype2] = 0 # symetric around 0
-        } else {
-          counts_pairwise[phenotype1,phenotype2] = log(counts_sample[[phenotype1]]/counts_sample[[phenotype2]])  # symetric around 0
-          counts_pairwise[phenotype2,phenotype1] = log(counts_sample[[phenotype2]]/counts_sample[[phenotype1]])  # symetric around 0
-        }
+        counts_pairwise[phenotype1,phenotype2] = counts_sample[[phenotype1]]/counts_sample[[phenotype2]]
       }
     }
   }
