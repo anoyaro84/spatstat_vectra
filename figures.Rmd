@@ -11,6 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r source, echo=FALSE}
 source("spatstat_vectra.R")
+library(latex2exp)
 ```
 
 
@@ -32,8 +33,8 @@ title("Location of Oak and Maple trees in a square property", line = 0)
 # estimator_density
 set.seed(123456789)
 OakMaple20 = rpoispp(20)
-Area20 = (OakMaple20$window$xrange[2]-OakMaple20$window$xrange[1])*(OakMaple20$window$yrange[2]-OakMaple20$window$yrange[1])
-lambda20 = OakMaple20$n / Area20
+Area20 = summary(OakMaple20)$Area
+lambda20 = summary(OakMaple20)$intensity
 
 OakMaple100 = rpoispp(100)
 Area100 = (OakMaple100$window$xrange[2]-OakMaple100$window$xrange[1])*(OakMaple100$window$yrange[2]-OakMaple100$window$yrange[1])
@@ -88,7 +89,7 @@ title("The Marked Point Process filtered on the Maples and its quadratcounts", l
 set.seed(123456789)
 
 homo = rpoispp(20,win = owin(c(0,2),c(0,2)))
-unitname(homo) = c("metre", "metres")
+unitname(homo) = list("metre", "metres",1)
 plot(homo, main = "",  pch = 20)
 title(main = TeX('Poisson Point Process created with rate $\\lambda = 20$'),line = 0.5)
 lab = function(x,y){
@@ -103,6 +104,52 @@ title(main = TeX('Poisson Point Process created with rate $\\lambda(x,y) = x+100
 #plot(Kest(homo)$theo~Kest(homo)$r)
 ```
 
+```{r RUN counts and area}
+# counts and area
+set.seed(123456789)
+
+Y150 = rmpoint(c(50,150))
+# plot(Y150)
+# identify(Y150)
+X1 = subset(Y150,marks == 1)
+X2 = Y150[197]
+Y1 = superimpose(X1,X2)
+
+unitname(Y150) = list("metre", "metres",1)
+unitname(Y1) = unitname(Y150)
+
+par(mfrow=(c(1,2)))
+plot(Y150, main = "",cols = c("blue", "red"),  pch = 20)
+title(main = TeX('Marked Poisson Point Process with 200 points'), sub = TeX('50 points of phenotype 1 and 150 point of phenotype 2'),line = 0.5)
+plot(Y1, main = "",cols = c("blue", "red"),  pch = 20)
+title(main = TeX('Marked Poisson Point Process with 51 points'), sub = TeX('50 points of phenotype 1 and 1 point of phenotype 2'),line = 0.5)
+
+
+
+# title(main = TeX('Poisson Point Process created with rate $\\lambda = 20$'),line = 0.5)
+
+# title(main = TeX('Poisson Point Process created with rate $\\lambda(x,y) = x+100y^2$'),line = 0.5)
+
+#plot(Kest(homo)$theo~Kest(homo)$r)
+```
+
+```{r RUN counts and area}
+# counts and area
+set.seed(123456789)
+
+X = rpoint(50)
+Y = X
+Window(X) = square(r=1,unitname = list("metre", "metres",1))
+Window(Y) = square(r=10,unitname = list("metre", "metres",1))
+plot(X,  pch = 20)
+plot(Y,  pch = 20)
+# title(main = TeX('Poisson Point Process created with rate $\\lambda = 20$'),line = 0.5)
+
+# title(main = TeX('Poisson Point Process created with rate $\\lambda(x,y) = x+100y^2$'),line = 0.5)
+
+#plot(Kest(homo)$theo~Kest(homo)$r)
+```
+
 ```{r RUN emptyspace}
 # OakMaple_emptyspace
 set.seed(123456789)
@@ -113,5 +160,13 @@ title("A Marked Point Process on the distribution of Oak and Maple trees", line 
 plot(Fest(OakMaple), main= NULL)
 title("The Empty Space function for the Marked Point Process", line = 0)
 plot(envelope(OakMaple,Fest))
+
+```
+```{r NOT RUN good plot and bad plot because of too many phenotypes}
+data(lansing)
+# good plot because of 3 phenotypes
+plot(alltypes(superimpose(blackoak = split(lansing)$blackoak,maple = split(lansing)$maple,hickory = split(lansing)$hickory)), samex = TRUE)
+# bad plot because of 4 phenotypes
+plot(alltypes(superimpose(blackoak = split(lansing)$blackoak,maple = split(lansing)$maple,hickory = split(lansing)$hickory,misc = split(lansing)$misc)),samex = TRUE)
 
 ```

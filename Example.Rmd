@@ -32,7 +32,7 @@ names(color_complete) = phenotype_complete
 
 fig.prefix.complete = './complete'
 
-r_vec = c(30)
+r_vec = c(20)
 
 
 phenotype_simple = list(Macrophage = c("CD163+PDL1-","CD163+PDL1+"),
@@ -75,7 +75,7 @@ D = file.path(base_path, c(
 		'HO105-083_[16066,33773]_cell_seg_data.txt', # simple: (maybe counts) 17 inside alltypes no Tcells solved
 		'HO105-083_[16367,35783]_cell_seg_data.txt'  # simple: (maybe counts) 18 inside alltypes no Tcells solved
 	))
-extreme = D
+# extreme = D
 # Plot variables
 
 plotter_sample = TRUE
@@ -85,11 +85,12 @@ plotter_alltypes = TRUE
 plotter = list(plotter_sample, plotter_quadrat, plotter_alltypes)
 
 # Select spatial statistics, or NULL then all inbuild spatial statistics are selected
-selected_spatstat_statistics = list('J')
+selected_spatstat_statistics = NULL
 
 # debug
 
-extreme = D[16]
+# extreme = D[8]
+# extreme = c(extreme[3],D[8])
 samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(extreme, '/')[[1]],1))
 seg_path = extreme
 PhenoOrder = phenotype_simple
@@ -113,7 +114,7 @@ for (file in extreme){
                       sample_name = samplename, plotter = plotter, fig.prefix = fig.prefix.simple,
                       r_vec = r_vec, spatstat_statistics = selected_spatstat_statistics)
 }
-# M_auto = feature_extract(outputs_auto, fig.prefix.simple)
+
 M = feature_extract(outputs = outputs_auto)
 write.csv(x = M,file = file.path(fig.prefix.simple, 'feature_matrix.csv'))
 ```
