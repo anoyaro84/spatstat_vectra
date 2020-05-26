@@ -272,9 +272,9 @@ do_analyse <- function(seg_path, PhenoOrder = NULL, ColsOrder = NULL,
     cat('computing', spatstat_statistic, 'of alltypes', fill = TRUE)
     
     if (spatstat_statistic %in% list("K","L","Kdot","Ldot","pcf")){
-      all_types = alltypes(csd_ppp,fun = paste(spatstat_statistic), correction = "iso", dataname = sample_name, envelope = TRUE, verb = TRUE)
+      all_types = alltypes(csd_ppp,fun = paste(spatstat_statistic), correction = "iso", dataname = sample_name, envelope = TRUE, verb = FALSE)
     } else {
-      all_types = alltypes(csd_ppp,fun = paste(spatstat_statistic), correction = "km", dataname = sample_name, envelope = TRUE, verb = TRUE)
+      all_types = alltypes(csd_ppp,fun = paste(spatstat_statistic), correction = "km", dataname = sample_name, envelope = TRUE, verb = FALSE)
     }
     
     # save object for debugging
@@ -419,10 +419,34 @@ interpolate_r <- function(all_types, r_vec, spatstat_statistic){
       # print(max(r_emperic))
       if (max(r_emperic)< r_i){
         # print('inside')
-        cat('computed r interval (rmax = ', max(r_emperic),') is too small for user defined radius, inserted NA\n', fill = TRUE)
+        cat('computed r interval (rmax = ', max(r_emperic),') is too small for user defined radius, used rmax as radius\n', fill = TRUE)
         
-        statistic_close_list[[paste("radius", r_i)]][[paste(spatstat_statistic, "fns which",index_pairwise)]] = NA
-        normalized_list[[paste("radius", r_i)]][[paste(spatstat_statistic, "fns which",index_pairwise)]] = NA
+        r_max = max(r_emperic)
+        
+        higher_bound = statistic_pairwise_phenotypes[["hi"]]
+        high_max = higher_bound[r_max]
+        
+        lower_bound = statistic_pairwise_phenotypes[["lo"]]
+        low_max = lower_bound[r_max]
+        
+        stat_max = statistic_pairwise_phenotypes[["obs"]][r_max]
+        
+        stat_theoretic = statistic_pairwise_phenotypes[["theo"]]
+        stat_theo_max = stat_theoretic[r_max]
+        
+        
+        if(isTRUE(is.na(high_max) | is.na(low_max))){
+          warning("NA in calculating significance bands, put in NA for normalized\n")
+          normalized = NA
+        }else if (high_max - low_max == 0){
+          warning("dividing by 0 in normalizing, put in NA for normalized \n")
+          normalized = NA
+        } else{
+          normalized = (stat_max-stat_theo_max)/abs(high_max-low_max)
+        }
+        
+        statistic_close_list[[paste("radius", r_i)]][[paste(spatstat_statistic, "fns which",index_pairwise)]] = stat_max - stat_theo_max
+        normalized_list[[paste("radius", r_i)]][[paste(spatstat_statistic, "fns which",index_pairwise)]] = normalized
         
         next
       }
@@ -461,11 +485,11 @@ interpolate_r <- function(all_types, r_vec, spatstat_statistic){
       stat = a*(r_i-r2)+stat2
       
       
-      if(is.na(high) | is.na(low)){
+      if(isTRUE(is.na(high) | is.na(low))){
         warning("NA in calculating significance bands, put in NA for normalized\n")
         normalized = NA
       }else if (high - low == 0){
-        warning("dividing by 0 in normalizing, put in 0 for normalized\n")
+        warning("dividing by 0 in normalizing, put in NA for normalized\n")
         normalized = NA
       } else{
         normalized = (stat-stat_theo)/abs(high-low)
@@ -598,7 +622,7 @@ feature_extract <- function(outputs){
     }
   }
   
-  # pairwise counts
+  # get phenotypes for pairwise counts
   
   phenos = c()
   
@@ -606,14 +630,17 @@ feature_extract <- function(outputs){
     phenos = union(phenos, rownames(out$counts_pairwise))
   }
   
-  counts_pairwise = lapply(phenos, function(x) expand.grid(x,phenos))
-  counts_pairwise = lapply(counts_pairwise, function(x) {apply(x, 1, function(y) paste0(y, collapse='_'))})
-  counts_pairwise_flat = c()
+  counts_pairwise = outer(X = phenos, Y = phenos, FUN = 'paste', sep = '_')
   
-  for (i in seq_along(counts_pairwise)) {
-    # counts_pairwise_flat = c(counts_pairwise_flat, paste0(names(counts_pairwise)[[i]], '_', counts_pairwise[[i]]))
-    counts_pairwise_flat = c(counts_pairwise_flat, paste0(names(counts_pairwise)[[i]], counts_pairwise[[i]])) # why names(counts_pairwise)[[i]] ?
+  counts_pairwise_flat = c()
+  for (i in seq_along(phenos)){
+    for (j in seq_along(phenos)){
+      if (i != j){
+        counts_pairwise_flat = c(counts_pairwise_flat, paste0(counts_pairwise[i,j]))
+      }
+    }
   }
+  
   counts_pairwise = counts_pairwise_flat
   
   counts_pairwise_allfeat = paste0('counts_pairwise_', counts_pairwise)
@@ -621,6 +648,7 @@ feature_extract <- function(outputs){
   # create a matrix for the count of phenotype per phenotype for the features
   mat_counts_pairwise = matrix(NA, nrow = length(counts_pairwise_allfeat), ncol = length(outputs),
                    dimnames = list(counts_pairwise_allfeat, names(outputs)))
+  
   
   # fill matrices
   for (i in seq_along(outputs)) {
@@ -630,12 +658,12 @@ feature_extract <- function(outputs){
     
     for (featname_from in rownames(data_counts_pairwise)){
       for (featname_to in colnames(data_counts_pairwise)){
-        mat_counts_pairwise[paste0('counts_pairwise_', featname_from, '_', featname_to),name] = data_counts_pairwise[featname_from, featname_to]
+        if (featname_from != featname_to){
+          mat_counts_pairwise[paste0('counts_pairwise_', featname_from, '_', featname_to),name] = data_counts_pairwise[featname_from, featname_to]
+        }
       }
     }
   }
-  
-  
   
   
   # get phenotypes for median minimal, median, MAD minimal, MAD.
@@ -653,15 +681,23 @@ feature_extract <- function(outputs){
   
   collect_pheno = sort(union(MED_min_pheno, union(MED_pheno, union(MAD_min_pheno,MAD_pheno))))
   
+  allfeat_min = outer(X = collect_pheno, Y = collect_pheno, FUN = 'paste', sep = '_')
   
-  allfeat_min = lapply(collect_pheno, function(x) expand.grid(collect_pheno, x))
-  allfeat_min = lapply(allfeat_min, function(x) {apply(x, 1, function(y) paste0(y, collapse='_'))})
   allfeat_min_flat = c()
-  
-  for (i in seq_along(allfeat_min)) {
-    # allfeat_min_flat = c(allfeat_min_flat, paste0(names(allfeat_min)[[i]], '_', allfeat_min[[i]]))
-    allfeat_min_flat = c(allfeat_min_flat, paste0(names(allfeat_min)[[i]], allfeat_min[[i]])) # why names(allfeat_min)[[i]] ?
+  for (i in seq_along(collect_pheno)){
+    for (j in seq_along(collect_pheno)){
+      allfeat_min_flat = c(allfeat_min_flat, paste0(allfeat_min[i,j]))
+    }
   }
+  
+  # allfeat_min = lapply(collect_pheno, function(x) expand.grid(collect_pheno, x))
+  # allfeat_min = lapply(allfeat_min, function(x) {apply(x, 1, function(y) paste0(y, collapse='_'))})
+  # allfeat_min_flat = c()
+  # 
+  # for (i in seq_along(allfeat_min)) {
+  #   # allfeat_min_flat = c(allfeat_min_flat, paste0(names(allfeat_min)[[i]], '_', allfeat_min[[i]]))
+  #   allfeat_min_flat = c(allfeat_min_flat, paste0(names(allfeat_min)[[i]], allfeat_min[[i]])) # why names(allfeat_min)[[i]] ?
+  # }
   allfeat_min = allfeat_min_flat
   
   allfeat_normal = combn(collect_pheno,2, simplify = FALSE)

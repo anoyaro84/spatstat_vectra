@@ -25,70 +25,53 @@ set.seed(123456789)
 OakMaple = rmpoispp(50,types = c("Oak", "Maple"))
 par(mfrow=c(1,1))
 plot(OakMaple, main=NULL, cols=c("blue","red"),pch=20)
-title("Location of Oak and Maple trees in a square property", line = 0)
-
+title(main = TeX("Location of Oak and Maple trees in a square property"), line = 0.5)
 ```
 
 ```{r OakMaple20/100}
 # estimator_density
 set.seed(123456789)
 OakMaple20 = rpoispp(20)
-Area20 = summary(OakMaple20)$Area
 lambda20 = summary(OakMaple20)$intensity
 
 OakMaple100 = rpoispp(100)
-Area100 = (OakMaple100$window$xrange[2]-OakMaple100$window$xrange[1])*(OakMaple100$window$yrange[2]-OakMaple100$window$yrange[1])
-lambda100 = OakMaple100$n / Area100
+lambda100 = summary(OakMaple100)$intensity
 
 par(mfrow=(c(1,2)))
 plot(OakMaple20, main = NULL, pch=20)
-title(paste("Poisson Process with intensity 20 and estimator", lambda20), line = 0)
+title(main = TeX(paste("Poisson Process with intensity 20 and estimator", lambda20)), line = 0.5)
 
 plot(OakMaple100, main = NULL,pch=20)
-title(paste("Poisson Process with intensity 100 and estimator", lambda100), line = 0)
+title(main = TeX(paste("Poisson Process with intensity 100 and estimator", lambda100)), line = 0.5)
 ```
 
 ```{r RUN estimators density splitted}
 # estimators_density_splitted
 set.seed(123456789)
-
-Oak_n = sum(OakMaple$marks =="Oak")
-Maple_n = sum(OakMaple$marks =="Maple")
-Area = (OakMaple$window$xrange[2]-OakMaple$window$xrange[1])*(OakMaple$window$yrange[2]-OakMaple$window$yrange[1])
-lambdaOak = Oak_n / Area
-lambdaMaple = Maple_n / Area
+splitted = split(OakMaple)
+Oak = splitted$Oak
+Maple = splitted$Maple
+Oak_n = summary(Oak)$n
+Maple_n = summary(Maple)$n
+Area = summary(OakMaple)$window$area
+lambdaOak = summary(OakMaple)$marks$intensity[[1]]
+lambdaMaple = summary(OakMaple)$marks$intensity[[2]]
 
 
 OakMaple = rmpoispp(50,types = c("Oak", "Maple"))
 layout(matrix(c(1,1,2,3), 2, 2, byrow = TRUE))
 plot(OakMaple, main=NULL, cols=c("blue","red"),pch=20)
-plot(OakMaple[OakMaple$marks == "Oak"],main=NULL,cols=c("blue","red"),pch=20)
-#title(paste("The Point Process of the Oaks in Figure 1 and the density estimator", lambdaOak), line = 0)
-plot(OakMaple[OakMaple$marks == "Maple"],main=NULL,cols=c("blue","red"),pch=20)
-#title(paste("The Point Process of the Maples  in Figure 1 and the density estimator", lambdaMaple), line = 0)
+plot(Oak,main=NULL,cols=c("blue","red")[1],pch=20)
+#title(main = TeX(paste("The Point Process of the Oaks in Figure 1 and the density estimator", lambdaOak)), line = 0.5)
+plot(Maple,main=NULL,cols=c("blue","red")[2],pch=20)
+#title(main = TeX(paste("The Point Process of the Maples  in Figure 1 and the density estimator", lambdaMaple)), line = 0.5)
 ```
 
-```{r RUN quadratcounts}
-#OakMaple_quadratcounts
-set.seed(123456789)
-
-layout(matrix(c(1,1,2,3), 2, 2, byrow = TRUE))
-
-plot(OakMaple, main=NULL, cols  = c("blue", "red"), pch = 20)
-plot(quadratcount(OakMaple), add=TRUE)
-title("The Marked Point Process and its quadratcounts", line=0)
-plot(OakMaple[OakMaple$marks == "Oak"], main = NULL,cols = c("blue", "red"), pch = 20)
-plot(quadratcount(OakMaple[OakMaple$marks == "Oak"]), add=TRUE)
-title("The Marked Point Process filtered on the Oaks and its quadratcounts", line=0)
-plot(OakMaple[OakMaple$marks == "Maple"], main=NULL, cols = c("blue", "red"), pch = 20)
-plot(quadratcount(OakMaple[OakMaple$marks == "Maple"]), add=TRUE)
-title("The Marked Point Process filtered on the Maples and its quadratcounts", line=0)
-```
 ```{r RUN homogenous and inhomogenous}
 # homogenous and inhomogenous
 set.seed(123456789)
 
-homo = rpoispp(20,win = owin(c(0,2),c(0,2)))
+homo = rpoispp(20, win = square(r=2))
 unitname(homo) = list("metre", "metres",1)
 plot(homo, main = "",  pch = 20)
 title(main = TeX('Poisson Point Process created with rate $\\lambda = 20$'),line = 0.5)
@@ -96,7 +79,7 @@ lab = function(x,y){
     #return(exp(-x^2-y^2))
     return(x+100*y^2)
 }
-inhomo = rpoispp(lab ,win = owin(c(0,2),c(0,2)))
+inhomo = rpoispp(lab ,win = square(r=2))
 unitname(inhomo) = c("metre", "metres")
 plot(inhomo, xlab = "", ylab = "", main = "",  pch = 20)
 title(main = TeX('Poisson Point Process created with rate $\\lambda(x,y) = x+100y^2$'),line = 0.5)
@@ -104,27 +87,38 @@ title(main = TeX('Poisson Point Process created with rate $\\lambda(x,y) = x+100
 #plot(Kest(homo)$theo~Kest(homo)$r)
 ```
 
-```{r RUN counts and area}
-# counts and area
+```{r RUN counter example count statistic}
+# counts statistic
 set.seed(123456789)
 
-Y150 = rmpoint(c(50,150))
-# plot(Y150)
-# identify(Y150)
-X1 = subset(Y150,marks == 1)
-X2 = Y150[197]
-Y1 = superimpose(X1,X2)
+X = rmpoint(c(50,150))
+# plot(X)
+# identify(X)
 
-unitname(Y150) = list("metre", "metres",1)
-unitname(Y1) = unitname(Y150)
+X1 = subset(X,marks == 1)
+# same as
+# splitted = split(X)
+# X1 = splitted$'1'
+X2 = X[197]
+Y = superimpose(X1,X2)
 
-par(mfrow=(c(1,2)))
-plot(Y150, main = "",cols = c("blue", "red"),  pch = 20)
-title(main = TeX('Marked Poisson Point Process with 200 points'), sub = TeX('50 points of phenotype 1 and 150 point of phenotype 2'),line = 0.5)
-plot(Y1, main = "",cols = c("blue", "red"),  pch = 20)
-title(main = TeX('Marked Poisson Point Process with 51 points'), sub = TeX('50 points of phenotype 1 and 1 point of phenotype 2'),line = 0.5)
+unitname(X) = list("metre", "metres",1)
+unitname(Y) = unitname(X)
 
 
+
+png(filename = 'fig_counter_example_count_statistic_X.png', width = 720, height = 720)
+par(oma=c(0,0,0,0))
+plot(X, main = "",cols = c("blue", "red"),  pch = 20, cex = 1.5)
+title(main = TeX('Marked Poisson Point Process X with 200 points'), sub = TeX('50 points of phenotype 1 and 150 point of phenotype 2'),line = 0.5)
+dev.off()
+png(filename = 'fig_counter_example_count_statistic_Y.png', width = 720, height = 720)
+par(oma=c(0,0,0,0))
+plot(Y, main = "",cols = c("blue", "red"),  pch = 20, cex = 1.5)
+title(main = TeX('Marked Poisson Point Process Y with 51 points'), sub = TeX('50 points of phenotype 1 and 1 point of phenotype 2'),line = 0.5)
+dev.off()
+
+getwd()
 
 # title(main = TeX('Poisson Point Process created with rate $\\lambda = 20$'),line = 0.5)
 
@@ -133,21 +127,124 @@ title(main = TeX('Marked Poisson Point Process with 51 points'), sub = TeX('50 p
 #plot(Kest(homo)$theo~Kest(homo)$r)
 ```
 
-```{r RUN counts and area}
+```{r RUN counter example count area}
 # counts and area
 set.seed(123456789)
 
-X = rpoint(50)
-Y = X
-Window(X) = square(r=1,unitname = list("metre", "metres",1))
-Window(Y) = square(r=10,unitname = list("metre", "metres",1))
-plot(X,  pch = 20)
-plot(Y,  pch = 20)
+X = rmpoint(c(50,150))
+Z = X
+Window(X) = square(r=1)
+Window(Z) = square(r=2)
+
+
+
+png(filename = 'fig_counter_example_count_area_X.png', width = 720, height = 720)
+par(oma=c(0,0,0,0))
+plot(X, main = "",cols = c("blue", "red"),  pch = 20, cex = 2)
+title(main = TeX('Marked Poisson Point Process X with 200 points in the unit square observation window'), sub = TeX('50 points of phenotype 1 and 150 point of phenotype 2'),line = 0.5)
+dev.off()
+png(filename = 'fig_counter_example_count_area_Z.png', width = 720, height = 720)
+par(oma=c(0,0,0,0))
+plot(Z, main = "",cols = c("blue", "red"),  pch = 20, cex = 2)
+title(main = TeX('Marked Poisson Point Process Z with 200 points in a $2 \\times 2$ units observation window'), sub = TeX('50 points of phenotype 1 and 150 point of phenotype 2'),line = 0.5)
+dev.off()
+
+getwd()
+
+
 # title(main = TeX('Poisson Point Process created with rate $\\lambda = 20$'),line = 0.5)
 
 # title(main = TeX('Poisson Point Process created with rate $\\lambda(x,y) = x+100y^2$'),line = 0.5)
 
 #plot(Kest(homo)$theo~Kest(homo)$r)
+```
+```{r RUN example pairwise relative count statistic}
+# counts and area
+set.seed(123456789)
+
+
+V = rmpoint(c(10,50,10))
+W1 = split(V)$'1'
+W23 = rmpoint(c(20,40), types = c('2','3'))
+W2 = split(W23)$'2'
+W3 =split(W23)$'3'
+W = superimpose('1' =  W1,'2' =  W2,'3' =  W3)
+
+
+png(filename = 'fig_example_pairwise_relative_count_V.png', width = 720, height = 720)
+par(oma=c(0,0,0,0))
+plot(V, main = "", cols = c("blue", "red",'green'),  pch = 20, cex = 2)
+title(main = TeX('Marked Poisson Point Process V with 70 points in the unit square observation window'), sub = TeX('10 points of phenotype 1, 50 point of phenotype 2 and 10 points of phenotype 3'), line = 0.5)
+dev.off()
+png(filename = 'fig_example_pairwise_relative_count_W.png', width = 720, height = 720)
+par(oma=c(0,0,0,0))
+plot(W, main = "", cols = c("blue", "red",'green'),  pch = 20, cex = 2)
+title(main = TeX('Marked Poisson Point Process V with 70 points in the unit square observation window'), sub = TeX('10 points of phenotype 1, 20 point of phenotype 2 and 40 points of phenotype 3'),line = 0.5)
+dev.off()
+
+getwd()
+
+
+# title(main = TeX('Poisson Point Process created with rate $\\lambda = 20$'),line = 0.5)
+
+# title(main = TeX('Poisson Point Process created with rate $\\lambda(x,y) = x+100y^2$'),line = 0.5)
+
+#plot(Kest(homo)$theo~Kest(homo)$r)
+```
+```{r RUN quadratcounts}
+#OakMaple_quadratcounts
+set.seed(123456789)
+
+X = rmpoint(c(50,150))
+
+X1 = split(X)$'1'
+X2 = split(X)$'2'
+par(oma=c(0,0,0,0))
+png(filename = 'fig_example_quadratcounts_X.png', width = 720, height = 720)
+layout(matrix(c(1,1,2,3), 2, 2, byrow = TRUE))
+par(oma=c(0,0,0,0))
+plot(X, main=NULL, cols  = c("blue", "red"), pch = 20)
+title(main = TeX("The Marked Point Process X and its quadratcounts"), sub = TeX('50 points of phenotype 1 and 150 point of phenotype 2'), line=0.5)
+
+plot(X1, main = NULL,cols = c("blue", "red")[1], pch = 20)
+plot(quadratcount(X1), add=TRUE)
+title(main = TeX("The quadratcounts of phenotype 1 of X"), sub = TeX('50 points of phenotype 1'), line=0.5)
+
+plot(X2, main=NULL, cols = c("blue", "red")[2], pch = 20)
+plot(quadratcount(X2), add=TRUE)
+title(main = TeX("The quadratcounts of phenotype 2 of X"), sub = TeX('150 points of phenotype 2'), line=0.5)
+
+dev.off()
+getwd()
+```
+
+```{r RUN quadratcounts}
+#OakMaple_quadratcounts
+set.seed(123456789)
+
+X = rmpoint(c(50,150))
+X1 = split(X)$'1'
+X2 = split(X)$'2'
+
+png(filename = 'fig_example_quadratcounts_X_full.png', width = 720, height = 720)
+par(oma=c(0,0,0,0))
+plot(X, main=NULL, cols  = c("blue", "red"), pch = 20)
+title(main = TeX("Marked Point Process X with 200 points in the unit square observation window "), sub = TeX('50 points of phenotype 1 and 150 point of phenotype 2'), line=0.5)
+dev.off()
+
+png(filename = 'fig_example_quadratcounts_X_split.png', width = 720, height = 720)
+par(oma=c(0,0,0,0))
+par(mfrow = c(1,2))
+plot(X1, main = NULL,cols = c("blue", "red")[1], pch = 20)
+plot(quadratcount(X1), add=TRUE)
+title(main = TeX("The quadratcounts of phenotype 1 of X"), sub = TeX('50 points of phenotype 1'), line=0.5)
+
+plot(X2, main=NULL, cols = c("blue", "red")[2], pch = 20)
+plot(quadratcount(X2), add=TRUE)
+title(main = TeX("The quadratcounts of phenotype 2 of X"), sub = TeX('150 points of phenotype 2'), line=0.5)
+
+dev.off()
+getwd()
 ```
 
 ```{r RUN emptyspace}
