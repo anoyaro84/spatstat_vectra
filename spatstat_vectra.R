@@ -416,11 +416,12 @@ interpolate_r <- function(all_types, r_vec, spatstat_statistic){
         left = condition
         right = condition + 1
       }
+      
+      # print(paste(max(r_emperic), r_i))
       # print(max(r_emperic))
       if (max(r_emperic)< r_i){
         # print('inside')
-        cat('computed r interval (rmax = ', max(r_emperic),') is too small for user defined radius, used rmax as radius\n', fill = TRUE)
-        
+        cat('computed r interval (rmax = ', max(r_emperic),') is too small for user defined radius, used rmax as radius.\n', fill = TRUE)
         r_max = max(r_emperic)
         
         higher_bound = statistic_pairwise_phenotypes[["hi"]]
@@ -434,15 +435,17 @@ interpolate_r <- function(all_types, r_vec, spatstat_statistic){
         stat_theoretic = statistic_pairwise_phenotypes[["theo"]]
         stat_theo_max = stat_theoretic[r_max]
         
-        
         if(isTRUE(is.na(high_max) | is.na(low_max))){
-          warning("NA in calculating significance bands, put in NA for normalized\n")
-          normalized = NA
-        }else if (high_max - low_max == 0){
-          warning("dividing by 0 in normalizing, put in NA for normalized \n")
-          normalized = NA
+          warning("NA in calculating significance bands so width significance band is infinit, put in 0 for normalized.\n")
+          normalized = 0
+        }else if (isTRUE(high_max == low_max)){
+          dif_bound = abs(higher_bound-lower_bound)
+          width_eps = min(dif_bound[dif_bound>0])
+          warning('dividing by 0 in normalizing, normalized by the minimum width of the significance band unequal to 0 (width_eps = ',width_eps,'.\n')
+          normalized = (stat_max-stat_theo_max)/width_eps
         } else{
-          normalized = (stat_max-stat_theo_max)/abs(high_max-low_max)
+          width = abs(high_max-low_max)
+          normalized = (stat_max-stat_theo_max)/width
         }
         
         statistic_close_list[[paste("radius", r_i)]][[paste(spatstat_statistic, "fns which",index_pairwise)]] = stat_max - stat_theo_max
@@ -486,13 +489,16 @@ interpolate_r <- function(all_types, r_vec, spatstat_statistic){
       
       
       if(isTRUE(is.na(high) | is.na(low))){
-        warning("NA in calculating significance bands, put in NA for normalized\n")
-        normalized = NA
-      }else if (high - low == 0){
-        warning("dividing by 0 in normalizing, put in NA for normalized\n")
-        normalized = NA
+        warning("NA in calculating significance bands so width significance band is infinit, put in 0 for normalized.\n")
+        normalized = 0
+      }else if (isTRUE(high == low)){
+        dif_bound = abs(higher_bound-lower_bound)
+        width_eps = min(dif_bound[dif_bound>0])
+        warning('dividing by 0 in normalizing, normalized by the minimum width of the significance band unequal to 0 (width_eps = ',width_eps,'.\n')
+        normalized = (stat-stat_theo)/width_eps
       } else{
-        normalized = (stat-stat_theo)/abs(high-low)
+        width = abs(high-low)
+        normalized = (stat-stat_theo)/width
       }
       
       statistic_close_list[[paste("radius", r_i)]][[paste(spatstat_statistic, "fns which",index_pairwise)]] = stat - stat_theo

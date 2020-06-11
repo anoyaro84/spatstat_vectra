@@ -95,10 +95,9 @@ X = rmpoint(c(50,150))
 # plot(X)
 # identify(X)
 
-X1 = subset(X,marks == 1)
-# same as
+X1 = subset(X,marks == 1) # 2 levels
 # splitted = split(X)
-# X1 = splitted$'1'
+# X1 = splitted$'1' # 1 level
 X2 = X[197]
 Y = superimpose(X1,X2)
 
@@ -191,6 +190,7 @@ getwd()
 
 #plot(Kest(homo)$theo~Kest(homo)$r)
 ```
+
 ```{r RUN quadratcounts}
 #OakMaple_quadratcounts
 set.seed(123456789)
@@ -204,7 +204,7 @@ png(filename = 'fig_example_quadratcounts_X.png', width = 720, height = 720)
 layout(matrix(c(1,1,2,3), 2, 2, byrow = TRUE))
 par(oma=c(0,0,0,0))
 plot(X, main=NULL, cols  = c("blue", "red"), pch = 20)
-title(main = TeX("The Marked Point Process X and its quadratcounts"), sub = TeX('50 points of phenotype 1 and 150 point of phenotype 2'), line=0.5)
+title(main = TeX('Marked Point Process X with 200 points in the unit square observation window'), sub = TeX('50 points of phenotype 1 and 150 point of phenotype 2'), line=0.5)
 
 plot(X1, main = NULL,cols = c("blue", "red")[1], pch = 20)
 plot(quadratcount(X1), add=TRUE)
