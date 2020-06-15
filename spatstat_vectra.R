@@ -18,7 +18,7 @@ library(latex2exp)
 do_analyse <- function(seg_path, PhenoOrder = NULL, ColsOrder = NULL,
                        XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype',
                        sample_name = 'Input sample', plotter = c(FALSE,FALSE,FALSE), fig.prefix = '.',
-                       r_vec = NULL, spatstat_statistics = NULL, ...) {
+                       r_vec = NULL, spatstat_statistics = 'ALL', ...) {
   
   
   # Create table with the right spatial dimensions such as described by the component file
@@ -82,10 +82,12 @@ do_analyse <- function(seg_path, PhenoOrder = NULL, ColsOrder = NULL,
   
   spatstat_statistics_all = list("G","F", "J","Gdot", "Jdot", "K", "L", "pcf", "Kdot", "Ldot")
   
-  if (is.null(spatstat_statistics)) {
+  if (isTRUE(spatstat_statistics == 'ALL')) {
     spatstat_statistics = spatstat_statistics_all
   } else if (all(spatstat_statistics %in% spatstat_statistics_all)) {
     spatstat_statistics = spatstat_statistics
+  } else if (is.null(spatstat_statistics)) {
+    spatstat_statistics = list()
   } else {
     stop("One or more spatial statistics in parameter 'spatstat_statistics' are not correctly defined")
   }
@@ -93,6 +95,7 @@ do_analyse <- function(seg_path, PhenoOrder = NULL, ColsOrder = NULL,
   
   
   #### normal statistics: Median and Median Absolute Deviation ####
+  
   
   # Create Intable with nearest distances for each phenotype, here after the substitution of "" to "Other" and Simplyfying the Phenotypes
   Intable_with_distance = Intable %>%
@@ -108,6 +111,7 @@ do_analyse <- function(seg_path, PhenoOrder = NULL, ColsOrder = NULL,
   MED = output[[2]]
   MAD_min = output[[3]]
   MAD = output[[4]]
+  ratio_distances = output[[5]]
   
   
   #### Creation Poisson Point Process and quadratcounts figures ####
@@ -136,7 +140,7 @@ do_analyse <- function(seg_path, PhenoOrder = NULL, ColsOrder = NULL,
   
   density_sample = summary(csd_ppp)$marks[['intensity']]
   names(density_sample) = levels(marks(csd_ppp))
-  
+  print(counts_sample)
   
   if (!is_empty(missing_in_data)){
     for (missing_pheno in missing_in_data){
@@ -144,7 +148,7 @@ do_analyse <- function(seg_path, PhenoOrder = NULL, ColsOrder = NULL,
       density_sample[[missing_pheno]] = 0
     }
   }
-  # print(counts_sample)
+  
   counts_normed_sample = counts_sample/csd_ppp$n
   names(counts_normed_sample) = names(counts_sample)
   
@@ -267,43 +271,43 @@ do_analyse <- function(seg_path, PhenoOrder = NULL, ColsOrder = NULL,
   
   
   #### compute inbuild statistics with statistic-dependent correction-method ####
-  for (spatstat_statistic in spatstat_statistics){
-    
-    cat('computing', spatstat_statistic, 'of alltypes', fill = TRUE)
-    
-    if (spatstat_statistic %in% list("K","L","Kdot","Ldot","pcf")){
-      all_types = alltypes(csd_ppp,fun = paste(spatstat_statistic), correction = "iso", dataname = sample_name, envelope = TRUE, verb = FALSE)
-    } else {
-      all_types = alltypes(csd_ppp,fun = paste(spatstat_statistic), correction = "km", dataname = sample_name, envelope = TRUE, verb = FALSE)
-    }
-    
-    # save object for debugging
-    all_types_spatstat_statistics_sample_name[[spatstat_statistic]] = all_types
-    
-    # plot computation of inbuild statistic and save in output directory
-    if (isTRUE(plotter[[3]])){
+  if(!is.null(spatstat_statistics)){
+    for (spatstat_statistic in spatstat_statistics){
       
-      png(filename = paste0(file.path(output_dir, sample_name),"_statistic_",spatstat_statistic,".png"), width = 720, height = 720)
-      par(mar=rep(0.5, 4))
-      plot(all_types, samex = TRUE)
-      # plot(all_types)
-      dev.off()
+      cat('computing', spatstat_statistic, 'of alltypes', fill = TRUE)
+      
+      if (spatstat_statistic %in% list("K","L","Kdot","Ldot","pcf")){
+        all_types = alltypes(csd_ppp,fun = paste(spatstat_statistic), correction = "iso", dataname = sample_name, envelope = TRUE, verb = FALSE)
+      } else {
+        all_types = alltypes(csd_ppp,fun = paste(spatstat_statistic), correction = "km", dataname = sample_name, envelope = TRUE, verb = FALSE)
+      }
+      
+      # save object for debugging
+      all_types_spatstat_statistics_sample_name[[spatstat_statistic]] = all_types
+      
+      # plot computation of inbuild statistic and save in output directory
+      if (isTRUE(plotter[[3]])){
+        
+        png(filename = paste0(file.path(output_dir, sample_name),"_statistic_",spatstat_statistic,".png"), width = 720, height = 720)
+        par(mar=rep(0.5, 4))
+        plot(all_types, samex = TRUE)
+        # plot(all_types)
+        dev.off()
+      }
+      
+      # interpolate the statistic value (and the normalized statistic value) for the user-defined radi in r_vec
+      output = interpolate_r(all_types, r_vec, spatstat_statistic)
+      
+      statistic_close_list[[spatstat_statistic]] = output[[1]]
+      normalized_list[[spatstat_statistic]] = output[[2]]
     }
-    
-    # interpolate the statistic value (and the normalized statistic value) for the user-defined radi in r_vec
-    output = interpolate_r(all_types, r_vec, spatstat_statistic)
-    
-    statistic_close_list[[spatstat_statistic]] = output[[1]]
-    normalized_list[[spatstat_statistic]] = output[[2]]
   }
-  
   #### gather the output of the computations in a list ####
   output_data_raw = list()
   output_data_raw[["csd_ppp"]] = csd_ppp
   output_data_raw[["counts_sample"]] = counts_sample
-  output_data_raw[["counts_normed_sample"]] = counts_normed_sample # new
-  output_data_raw[["counts_pairwise"]] = counts_pairwise               # new
-  # output_data_raw[["Area_sample"]] = Area_sample
+  output_data_raw[["counts_normed_sample"]] = counts_normed_sample
+  output_data_raw[["counts_pairwise"]] = counts_pairwise
   output_data_raw[["density_sample"]] = density_sample
   output_data_raw[["quadratcount_X2statistic"]] = quadratcount_X2statistic
   output_data_raw[["quadratcount_X2statistic_normed"]] = quadratcount_X2statistic_normed
@@ -311,6 +315,8 @@ do_analyse <- function(seg_path, PhenoOrder = NULL, ColsOrder = NULL,
   output_data_raw[["MED"]] = MED
   output_data_raw[["MAD_min"]] = MAD_min
   output_data_raw[["MAD"]] = MAD
+  output_data_raw[["ratio_distances"]] = ratio_distances
+  
   output_data_raw[["statistic_close_list"]] = statistic_close_list
   output_data_raw[["normalized_list"]] = normalized_list
   output_data_raw[["all_types_spatstat_statistics_sample_name"]] = all_types_spatstat_statistics_sample_name
@@ -362,7 +368,39 @@ getMAD <- function(data_with_distance, pairwise_distances, pheno_vector, missing
       MAD[paste(from), paste(to)] = mad(pairwise_to_from)
     }
   }
-  return(list(MED_min, MED, MAD_min, MAD))
+  
+  
+  ratio_distances = matrix(NA, nrow = 1, ncol = 5, 
+                           dimnames = list(paste('Cell ID'), c('Distance Tumor to Tcell','Cell ID Tcell','Distance Tcell to Macrophage', 'Cell ID Macrophage', 'distance_ratio_Tumor_Tcell_Macrophage')))
+  
+  if (!any('Tumors' %in% missing_in_data)){
+    tumors = data_with_distance %>% filter(`Phenotype` == 'Tumors')
+    
+    ratio_distances = matrix(NA, nrow = length(tumors$`Cell ID`), ncol = 5, 
+                             dimnames = list(paste('Cell ID', tumors$`Cell ID`),c('Distance Tumor to Tcell','Cell ID Tcell','Distance Tcell to Macrophage', 'Cell ID Macrophage', 'distance_ratio_Tumor_Tcell_Macrophage')))
+    
+    if ((!any(c('Tcells', 'Macrophage') %in% missing_in_data))){
+      tcells = data_with_distance %>% filter(`Phenotype` == 'Tcells')
+      macrophages = data_with_distance %>% filter(`Phenotype` == 'Macrophage')
+      
+      for (tumor_ID in tumors$`Cell ID`){
+        tcell_ID = as.integer(tumors[which(tumors$`Cell ID` == tumor_ID), 'Cell ID Tcells'])
+        ratio_distances[paste('Cell ID', tumor_ID),'Cell ID Tcell'] = tcell_ID
+        distance_tumor_to_tcell = as.numeric(tumors[which(tumors$`Cell ID` == tumor_ID), 'Distance to Tcells'])
+        ratio_distances[paste('Cell ID', tumor_ID),'Distance Tumor to Tcell'] = distance_tumor_to_tcell
+        
+        macrophage_ID = as.integer(tcells[which(tcells$`Cell ID` == tcell_ID), 'Cell ID Macrophage'])
+        ratio_distances[paste('Cell ID', tumor_ID),'Cell ID Macrophage'] = macrophage_ID
+        distance_tcell_to_macrophage = as.numeric(tcells[which(tcells$`Cell ID` == tcell_ID), 'Distance to Macrophage'])
+        ratio_distances[paste('Cell ID', tumor_ID),'Distance Tcell to Macrophage'] = distance_tcell_to_macrophage
+        
+        ratio_distances[paste('Cell ID', tumor_ID),'distance_ratio_Tumor_Tcell_Macrophage'] = distance_tumor_to_tcell/distance_tcell_to_macrophage
+      }
+    }
+  }
+  
+  
+  return(list(MED_min, MED, MAD_min, MAD,ratio_distances))
 }
 
 # #### function normal statistic: Counts and density ####
@@ -439,10 +477,9 @@ interpolate_r <- function(all_types, r_vec, spatstat_statistic){
           warning("NA in calculating significance bands so width significance band is infinit, put in 0 for normalized.\n")
           normalized = 0
         }else if (isTRUE(high_max == low_max)){
-          dif_bound = abs(higher_bound-lower_bound)
-          width_eps = min(dif_bound[dif_bound>0])
-          warning('dividing by 0 in normalizing, normalized by the minimum width of the significance band unequal to 0 (width_eps = ',width_eps,'.\n')
-          normalized = (stat_max-stat_theo_max)/width_eps
+          width_eps = 10^(-5)
+          warning('dividing by 0 in normalizing, normalized by the minimum width of the significance band unequal to 0 (width_eps = 10^(-5).\n')
+          normalized = (stat-stat_theo)/width_eps
         } else{
           width = abs(high_max-low_max)
           normalized = (stat_max-stat_theo_max)/width
@@ -492,9 +529,8 @@ interpolate_r <- function(all_types, r_vec, spatstat_statistic){
         warning("NA in calculating significance bands so width significance band is infinit, put in 0 for normalized.\n")
         normalized = 0
       }else if (isTRUE(high == low)){
-        dif_bound = abs(higher_bound-lower_bound)
-        width_eps = min(dif_bound[dif_bound>0])
-        warning('dividing by 0 in normalizing, normalized by the minimum width of the significance band unequal to 0 (width_eps = ',width_eps,'.\n')
+        width_eps = 10^(-5)
+        warning('dividing by 0 in normalizing, normalized by the minimum width of the significance band unequal to 0 (width_eps = 10^(-5).\n')
         normalized = (stat-stat_theo)/width_eps
       } else{
         width = abs(high-low)
@@ -514,62 +550,65 @@ feature_extract <- function(outputs){
   
   cat('begin feature extraction', fill = TRUE)
   
-  
-  functions = c()
-  rs = c()
-  # get function names and rs
-  for (out in outputs) {
-    functions = union(functions, names(out$statistic_close_list))
-    rs = union(rs, names(out$statistic_close_list[[1]]))
-  }
-  
-  # get feature names
-  feat_names = list()
-  for (func in functions) {
-    feat_names[[func]] = c()
+  spatstat_statistics_available = outputs[1][['statistic_close_list']]
+  if (!is.null(spatstat_statistics_available)){
+    functions = c()
+    rs = c()
+    
+    # get function names and rs
     for (out in outputs) {
-      feat_names[[func]] = union(feat_names[[func]],
-                                 apply(expand.grid(dimnames(out$all_types_spatstat_statistics_sample_name[[func]]$which)), 
-                                       1, function(x) gsub('/$', '', paste0(x, collapse='/')))
+      functions = union(functions, names(out$statistic_close_list))
+      rs = union(rs, names(out$statistic_close_list[[1]]))
+    }
+    
+    # get feature names
+    feat_names = list()
+    for (func in functions) {
+      feat_names[[func]] = c()
+      for (out in outputs) {
+        feat_names[[func]] = union(feat_names[[func]],
+                                   apply(expand.grid(dimnames(out$all_types_spatstat_statistics_sample_name[[func]]$which)), 
+                                         1, function(x) gsub('/$', '', paste0(x, collapse='/')))
+        )
+      }
+    }
+    
+    # create a matrix
+    allfeat = lapply(feat_names, function(x) expand.grid(rs, x))
+    allfeat = lapply(allfeat, function(x) {apply(x, 1, function(y) paste0(y, collapse='_'))})
+    allfeat_flat = c()
+    
+    for (i in seq_along(allfeat)) {
+      allfeat_flat = c(allfeat_flat, paste0(names(allfeat)[[i]], '_', allfeat[[i]]),
+                       paste0('Normalized_',names(allfeat)[[i]], '_', allfeat[[i]])
       )
     }
-  }
-  
-  # create a matrix
-  allfeat = lapply(feat_names, function(x) expand.grid(rs, x))
-  allfeat = lapply(allfeat, function(x) {apply(x, 1, function(y) paste0(y, collapse='_'))})
-  allfeat_flat = c()
-  
-  for (i in seq_along(allfeat)) {
-    allfeat_flat = c(allfeat_flat, paste0(names(allfeat)[[i]], '_', allfeat[[i]]),
-                     paste0('Normalized_',names(allfeat)[[i]], '_', allfeat[[i]])
-    )
-  }
-  
-  
-  mat_ripleys = matrix(NA, nrow = length(allfeat_flat), ncol = length(outputs),
-               dimnames = list(sort(allfeat_flat), names(outputs)))
- 
-  
-  # fill matrix
-  for (i in seq_along(outputs)) {
-    out = outputs[[i]]
-    name = names(outputs)[i]
-    for (func in names(out$statistic_close_list)) {
-      df = melt(out$all_types_spatstat_statistics_sample_name[[func]]$which)
-      df$featname = gsub("/NA$", "", paste0(df$Var1, "/", df$Var2))
-      for (r in rs) {
-        data = as.data.frame(t(as.data.frame(out$statistic_close_list[[func]][[r]])))
-        if (nrow(data) > 0){
-          data$which = unlist(lapply(rownames(data), 
-                                     function(x) as.numeric(tail(strsplit(x, '.', fixed=T)[[1]],1))))
-          #ind = match(data$which, df$value)
-          ind = match(df$value, data$which)
-          df$Ffeatname = paste0(func, '_', r, '_', df$featname)
-          df$measure = data$V1[ind]
-          df$Nmeasure = as.data.frame(t(as.data.frame(out$normalized_list[[func]][[r]])))$V1[ind]
-          mat_ripleys[df$Ffeatname, name] = df$measure
-          mat_ripleys[paste0('Normalized_', df$Ffeatname), name] = df$Nmeasure
+    
+    
+    mat_ripleys = matrix(NA, nrow = length(allfeat_flat), ncol = length(outputs),
+                 dimnames = list(sort(allfeat_flat), names(outputs)))
+   
+    
+    # fill matrix
+    for (i in seq_along(outputs)) {
+      out = outputs[[i]]
+      name = names(outputs)[i]
+      for (func in names(out$statistic_close_list)) {
+        df = melt(out$all_types_spatstat_statistics_sample_name[[func]]$which)
+        df$featname = gsub("/NA$", "", paste0(df$Var1, "/", df$Var2))
+        for (r in rs) {
+          data = as.data.frame(t(as.data.frame(out$statistic_close_list[[func]][[r]])))
+          if (nrow(data) > 0){
+            data$which = unlist(lapply(rownames(data), 
+                                       function(x) as.numeric(tail(strsplit(x, '.', fixed=T)[[1]],1))))
+            #ind = match(data$which, df$value)
+            ind = match(df$value, data$which)
+            df$Ffeatname = paste0(func, '_', r, '_', df$featname)
+            df$measure = data$V1[ind]
+            df$Nmeasure = as.data.frame(t(as.data.frame(out$normalized_list[[func]][[r]])))$V1[ind]
+            mat_ripleys[df$Ffeatname, name] = df$measure
+            mat_ripleys[paste0('Normalized_', df$Ffeatname), name] = df$Nmeasure
+          }
         }
       }
     }
@@ -678,6 +717,7 @@ feature_extract <- function(outputs){
   MAD_min_pheno = c()
   MAD_pheno = c()
   
+  
   for (out in outputs) {
     MED_min_pheno = union(MED_min_pheno, rownames(out$MED_min))
     MED_pheno = union(MED_pheno, rownames(out$MED))
@@ -776,13 +816,83 @@ feature_extract <- function(outputs){
     }
   }
   
-  mat = t(rbind(mat_counts,mat_counts_normed, mat_counts_pairwise, mat_density, mat_X2stat, mat_X2stat_normed,
-              mat_med_min, mat_med, mat_mad_min, mat_mad, mat_ripleys))
+  # create a matrix for pairwise distances 
+  mat_ratio_distances_median = matrix(NA, nrow = 1, ncol = length(outputs),
+                       dimnames = list('distance_ratio_median_Tumor_Tcell_Macrophage', names(outputs)))
+  
+  # create a matrix for MAD symmetric for the features
+  mat_ratio_distances_mad = matrix(NA, nrow = 1, ncol = length(outputs),
+                                   dimnames = list('distance_ratio_mad_Tumor_Tcell_Macrophage', names(outputs)))
+  
+  
+  # fill matrices
+  for (i in seq_along(outputs)) {
+    out = outputs[[i]]
+    name = names(outputs)[i]
+    data_mat_ratio_distances = out$ratio_distances
+    mat_ratio_distances = data_mat_ratio_distances[,'distance_ratio_Tumor_Tcell_Macrophage']
+    
+    mat_ratio_distances_median['distance_ratio_median_Tumor_Tcell_Macrophage', name] = median(mat_ratio_distances)
+    mat_ratio_distances_mad['distance_ratio_mad_Tumor_Tcell_Macrophage', name] = mad(mat_ratio_distances)
+  }
+  
+  
+  if (!is.null(spatstat_statistics_available)){
+    mat = t(rbind(mat_counts,mat_counts_normed, mat_counts_pairwise, mat_density, mat_X2stat, mat_X2stat_normed,
+                mat_med_min, mat_med, mat_mad_min, mat_mad, mat_ratio_distances_median, mat_ratio_distances_mad, mat_ripleys))
+  } else {
+    mat = t(rbind(mat_counts,mat_counts_normed, mat_counts_pairwise, mat_density, mat_X2stat, mat_X2stat_normed,
+                  mat_med_min, mat_med, mat_mad_min, mat_mad, mat_ratio_distances_median, mat_ratio_distances_mad))
+  }
   
   cat('end feature extraction')
   
   return(mat)
 }
+
+#### RUN function statisticPerPatient: take the statistic (mean or median) over all the features for each patient ####
+
+statisticPerPatient <- function(mat, statistic = 'mean', na.handler = 'complete_cases'){
+  
+  # browser()
+  if (isTRUE(na.handler == 'complete_cases')){
+    # cat('samplenames with missing values removed for analyse:', rownames(mat[!complete.cases(mat),]), '. if empty either 0 or 1 samplenames are removed')
+    na.rm = FALSE # default setting
+    mat = mat[complete.cases(mat),] # complete cases
+  } else if (isTRUE(na.handler == 'ignore_na')){
+    na.rm = TRUE
+  } else {
+    stop('input na.handler must be either complete_cases or ignore_na')
+  }
+  
+  if (isFALSE(statistic %in% c('mean','median'))){
+    stop('input statistic must be either mean or median')
+  }
+  
+  samplenames = rownames(mat)
+  prediction_statistics = colnames(mat)
+  nrs = unique(str_remove_all(samplenames,pattern = '\\_\\[[0-9]+,[0-9]+\\]'))
+  
+  mat_allpatients = matrix(NA, nrow = length(nrs), ncol = length(prediction_statistics))
+  rownames(mat_allpatients) = nrs
+  colnames(mat_allpatients) = prediction_statistics
+  # browser()
+  for (patientnr in nrs){
+    
+    samplenames_patient = str_subset(samplenames, patientnr)
+    if (isTRUE(length(samplenames_patient) == 1) ){
+      mat_patient = t(as.matrix(mat[samplenames_patient,]))
+    } else {
+      mat_patient = mat[samplenames_patient,]
+    }
+    mat_allpatients[patientnr,] = apply(mat_patient, 2, statistic, na.rm = na.rm)
+  }
+  mat_allpatients[is.nan(mat_allpatients)] = NA
+  
+  return(mat_allpatients)
+}
+
+
 
 
 #### NOT RUN Calculate the mean shortest distance for each pair of types, including itself ####

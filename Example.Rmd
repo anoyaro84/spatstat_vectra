@@ -80,16 +80,15 @@ D = file.path(base_path, c(
 
 plotter_sample = F
 plotter_quadrat = F
-plotter_alltypes = T
+plotter_alltypes = F
 
 plotter = list(plotter_sample, plotter_quadrat, plotter_alltypes)
 
 # Select spatial statistics, or NULL then all inbuild spatial statistics are selected
-selected_spatstat_statistics = NULL
+selected_spatstat_statistics = list('Gdot', 'K') # 'ALL', NULL
 
 # debug
 
-# extreme = D[8]
 # extreme = c(extreme[3],D[8])
 samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(extreme, '/')[[1]],1))
 seg_path = extreme
@@ -107,13 +106,14 @@ spatstat_statistics = selected_spatstat_statistics
 outputs_auto = list()
 for (file in extreme){
 	cat('processing', file)
-    
+  
   samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(file, '/')[[1]],1))
 	outputs_auto[[samplename]] = do_analyse(seg_path = file, PhenoOrder = phenotype_simple, ColsOrder = color_simple,
                       XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype',
                       sample_name = samplename, plotter = plotter, fig.prefix = fig.prefix.simple,
                       r_vec = r_vec, spatstat_statistics = selected_spatstat_statistics)
 }
+
 saveRDS(outputs_auto, file = 'feature_matrix_output.RDS')
 M = feature_extract(outputs = outputs_auto)
 write.csv(x = M,file = file.path(fig.prefix.simple, 'feature_matrix.csv'))
@@ -152,8 +152,8 @@ image_check_path <- path.expand('~/Studie/Thesis - Local/spatstat_vectra/HO105 i
 
 #### Read file for selected images by Marit ####
 HO105_image_check <- read_excel(image_check_path)
-
 HOnrs_unfil = HO105_image_check$`HO105 nr`
+
 tumor_images_data_unfil = HO105_image_check$`Tumor images`
 # get the MSI's through regex finding: open bracket->MSI numbers->comma->MSI numbers-> closed bracket
 tumor_images_unfil = str_extract_all(tumor_images_data_unfil,'\\[[0-9]+,[0-9]+\\]')
@@ -168,6 +168,16 @@ sample_names_marit = lapply(seq_along(HOnrs),function(x) paste0(names(tumor_imag
 sample_names_marit_str = unlist(sample_names_marit)
 length(sample_names_marit_str)
 
+
+border_images_data_unfil = HO105_image_check$`Border images (% border)`
+# get the MSI's through regex finding: open closed bracket->MSI numbers->comma->MSI numbers-> closed closed bracket
+border_images_unfil = str_extract_all(border_images_data_unfil,'\\[[0-9]+,[0-9]+\\]')
+# create filter to check for non empty content
+non_empty_border = !sapply(border_images_unfil,is_empty)
+# create filtered tumor_images and HOnrs
+border_images = border_images_unfil[non_empty_border]
+HOnrs_border = HOnrs_unfil[non_empty_border]
+names(border_images) = HOnrs_border
 
 # #### check if the component data and segmentation data are one to one ####
 # # # find all files of HO105
@@ -212,7 +222,7 @@ source('spatstat_vectra.R')
 
 feature_matrix_simple = readRDS(path.expand('~/Studie/Thesis - Local/feature_matrix_simple.RDS'))
 
-
+stop()
 #### renaming rownames in simplified matrix with '_1_', '_2_', '_3_' and '_4_' (replace with '_') ####
 all_rownames = rownames(feature_matrix_simple)
 all_rownames = str_replace_all(all_rownames, pattern = '\\_[0-9]\\_', replacement = '\\_')
@@ -227,48 +237,6 @@ rownames(feature_matrix_simple) = all_rownames
 # stop('joe')
 
 
-#### function statisticPerPatient: take the statistic (mean or median) over all the features for each patient ####
-
-statisticPerPatient <- function(mat, statistic = 'mean', na.handler = 'complete_cases'){
-  
-  # browser()
-  if (isTRUE(na.handler == 'complete_cases')){
-    # cat('samplenames with missing values removed for analyse:', rownames(mat[!complete.cases(mat),]), '. if empty either 0 or 1 samplenames are removed')
-    na.rm = FALSE # default setting
-    mat = mat[complete.cases(mat),] # complete cases
-  } else if (isTRUE(na.handler == 'ignore_na')){
-    na.rm = TRUE
-  } else {
-    stop('input na.handler must be either complete_cases or ignore_na')
-  }
-  
-  if (isFALSE(statistic %in% c('mean','median'))){
-    stop('input statistic must be either mean or median')
-  }
-  
-  samplenames = rownames(mat)
-  prediction_statistics = colnames(mat)
-  nrs = unique(str_remove_all(samplenames,pattern = '\\_\\[[0-9]+,[0-9]+\\]'))
-  
-  mat_allpatients = matrix(NA, nrow = length(nrs), ncol = length(prediction_statistics))
-  rownames(mat_allpatients) = nrs
-  colnames(mat_allpatients) = prediction_statistics
-  # browser()
-  for (patientnr in nrs){
-    
-    samplenames_patient = str_subset(samplenames, patientnr)
-    if (isTRUE(length(samplenames_patient) == 1) ){
-      mat_patient = t(as.matrix(mat[samplenames_patient,]))
-    } else {
-      mat_patient = mat[samplenames_patient,]
-    }
-    mat_allpatients[patientnr,] = apply(mat_patient, 2, statistic, na.rm = na.rm)
-  }
-  mat_allpatients[is.nan(mat_allpatients)] = NA
-  
-  return(mat_allpatients)
-}
-
 
 mat_simple_allpatients_complete_cases_mean = statisticPerPatient(feature_matrix_simple, statistic = 'mean', na.handler = 'complete_cases')
 # apply(feature_matrix_simple,1,function(x) sum(is.na(x))) if all bigger than 0, then every sample has NA's in them, so no complete cases exist
@@ -281,29 +249,31 @@ mat_simple_allpatients_ignore_na_median = statisticPerPatient(feature_matrix_sim
 
 
 
-# #### finding the the widths for significance band of each feature per patient
-# 
-# feature_matrix_simple = M
-# uni_stats = unique(str_subset(colnames(feature_matrix_simple), '_radius'))
-# 
-# 
-# spats_unnorm = str_subset(uni_stats, 'Normalized',negate = TRUE)
-# m = matrix(NA,nrow = length(rownames(feature_matrix_simple)), ncol = length(spats_unnorm))
-# rownames(m) = rownames(feature_matrix_simple)
-# colnames(m) = spats_unnorm
-# 
-# for (patient in rownames(feature_matrix_simple)){
-#   for (stat in spats_unnorm){
-#     unnorm = feature_matrix_simple[patient,stat]
-#     nnorm = feature_matrix_simple[patient,paste0('Normalized_',stat)]
-#     width_sign_band = unnorm/nnorm
-#     m[patient,stat] = width_sign_band
-#   }
-# }
-# 
-# width_sign_band_min = apply(m,1,function(x) min(x,na.rm = TRUE))
-# width_sign_band_max = apply(m,1,function(x) max(x,na.rm = TRUE))
+#### finding the the widths for significance band of each feature per patient
 
+# feature_matrix_simple = M
+uni_stats = unique(str_subset(colnames(feature_matrix_simple), '_radius'))
+
+
+spats_unnorm = str_subset(uni_stats, 'Normalized',negate = TRUE)
+m = matrix(NA,nrow = length(rownames(feature_matrix_simple)), ncol = length(spats_unnorm))
+rownames(m) = rownames(feature_matrix_simple)
+colnames(m) = spats_unnorm
+
+for (patient in rownames(feature_matrix_simple)){
+  for (stat in spats_unnorm){
+    unnorm = feature_matrix_simple[patient,stat]
+    nnorm = feature_matrix_simple[patient,paste0('Normalized_',stat)]
+    width_sign_band = unnorm/nnorm
+    m[patient,stat] = width_sign_band
+  }
+}
+
+width_sign_band_min = apply(m,1,function(x) min(x,na.rm = TRUE))
+width_sign_band_max = apply(m,1,function(x) max(x,na.rm = TRUE))
+
+# min(width_sign_band_min) = 2.556935e-05
+# max(width_sign_band_max) = 172298.4
 
 
 # m = matrix(1:36,nrow = 6)
