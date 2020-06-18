@@ -78,30 +78,32 @@ D = file.path(base_path, c(
 # extreme = D
 # Plot variables
 
-plotter_sample = F
-plotter_quadrat = F
-plotter_alltypes = F
+plotter_sample = T
+plotter_quadrat = T
+plotter_alltypes = T
 
 plotter = list(plotter_sample, plotter_quadrat, plotter_alltypes)
 
 # Select spatial statistics, or NULL then all inbuild spatial statistics are selected
-selected_spatstat_statistics = list('Gdot', 'K') # 'ALL', NULL
+selected_spatstat_statistics = 'ALL' # 'ALL', NULL, list('Gdot', 'K')
 
 # debug
 
+extreme = file.path(base_path,'HO105-061_[11807,41972]_cell_seg_data.txt')
+
 # extreme = c(extreme[3],D[8])
-samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(extreme, '/')[[1]],1))
-seg_path = extreme
-PhenoOrder = phenotype_simple
-ColsOrder = color_simple
-XposCol = 'Cell X Position'
-YposCol = 'Cell Y Position'
-PhenoCol = 'Phenotype'
-sample_name = samplename
-plotter = plotter
-fig.prefix = fig.prefix.simple
-r_vec = r_vec
-spatstat_statistics = selected_spatstat_statistics
+# samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(extreme, '/')[[1]],1))
+# seg_path = extreme
+# PhenoOrder = phenotype_simple
+# ColsOrder = color_simple
+# XposCol = 'Cell X Position'
+# YposCol = 'Cell Y Position'
+# PhenoCol = 'Phenotype'
+# sample_name = samplename
+# plotter = plotter
+# fig.prefix = fig.prefix.simple
+# r_vec = r_vec
+# spatstat_statistics = selected_spatstat_statistics
 
 outputs_auto = list()
 for (file in extreme){
