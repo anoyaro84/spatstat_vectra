@@ -12,7 +12,7 @@ source('spatstat_vectra.R')
 
 
 base_path <- '../Exported data tables/' # Working for Yongsoo
-base_path <- path.expand('~/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping') # working for Erik
+base_path <- path.expand('~/Studie/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping') # working for Erik
 paths_to_seg <- list_cell_seg_files(base_path)
 cat("There are", length(paths_to_seg), "segmentation paths currently loaded")
 
@@ -32,7 +32,7 @@ names(color_complete) = phenotype_complete
 
 fig.prefix.complete = './complete'
 
-r_vec = c(20)
+r_vec = c(20,100)
 
 
 phenotype_simple = list(Macrophage = c("CD163+PDL1-","CD163+PDL1+"),
@@ -56,8 +56,8 @@ extreme = file.path(base_path, c(
 		'HO105-194_[16029,38205]_cell_seg_data.txt' # not clustered
 	))
 D = file.path(base_path, c(
-        'HO105-006_[9554,40992]_cell_seg_data.txt',  # complete and simple: no component (not in marits file) 1
-        'HO105-006_[10041,41957]_cell_seg_data.txt', # complete and simple: no component (not in marits file) 2
+    'HO105-006_[9554,40992]_cell_seg_data.txt',  # complete and simple: no component (not in marits file) 1
+    'HO105-006_[10041,41957]_cell_seg_data.txt', # complete and simple: no component (not in marits file) 2
 		'HO105-140_[16281,41985]_cell_seg_data.txt', # complete: Fest spacing  3 inside alltypes(..,fun=J) small counts 5,1
 		'HO105-083_[20512,33844]_cell_seg_data.txt', # simple: (maybe counts) 4 inside alltypes no Tcells solved
 		'HO105-083_[18166,32820]_cell_seg_data.txt', # simple: (maybe counts) 5 inside alltypes no Tcells solved
@@ -78,19 +78,18 @@ D = file.path(base_path, c(
 # extreme = D
 # Plot variables
 
-plotter_sample = T
-plotter_quadrat = T
-plotter_alltypes = T
+plotter_sample = F
+plotter_quadrat = F
+plotter_alltypes = F
 
 plotter = list(plotter_sample, plotter_quadrat, plotter_alltypes)
 
 # Select spatial statistics, or NULL then all inbuild spatial statistics are selected
-selected_spatstat_statistics = NULL
+selected_spatstat_statistics = list('Gdot', 'K') # 'ALL', NULL
 
 # debug
 
-# extreme = D[8]
-extreme = c(extreme[3],D[8])
+# extreme = c(extreme[3],D[8])
 samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(extreme, '/')[[1]],1))
 seg_path = extreme
 PhenoOrder = phenotype_simple
@@ -107,14 +106,15 @@ spatstat_statistics = selected_spatstat_statistics
 outputs_auto = list()
 for (file in extreme){
 	cat('processing', file)
-    
-  	samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(file, '/')[[1]],1))
+  
+  samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(file, '/')[[1]],1))
 	outputs_auto[[samplename]] = do_analyse(seg_path = file, PhenoOrder = phenotype_simple, ColsOrder = color_simple,
                       XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype',
                       sample_name = samplename, plotter = plotter, fig.prefix = fig.prefix.simple,
                       r_vec = r_vec, spatstat_statistics = selected_spatstat_statistics)
 }
 
+saveRDS(outputs_auto, file = 'feature_matrix_output.RDS')
 M = feature_extract(outputs = outputs_auto)
 write.csv(x = M,file = file.path(fig.prefix.simple, 'feature_matrix.csv'))
 ```
@@ -129,23 +129,22 @@ library('readxl')
 # Define path for all data
 base_path <- '../Exported data tables/' # Working for Yongsoo
 # base_path <- 'C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping' # working for Erik
-base_path = path.expand("~/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping")
+base_path = path.expand("~/Studie/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping")
 
 # define path for selected images by Marit
 image_check_path = NULL # working for Yongsoo (CHANGE)
-image_check_path <- 'C:/Users/erikb/Documents/Thesis - Local/spatstat_vectra/HO105 image check.xlsx' # working for Erik
-image_check_path <- path.expand('~/spatstat_vectra/HO105 image check.xlsx') # working for Erik
+image_check_path <- 'C:/Users/erikb/Documents/Studie/Thesis - Local/spatstat_vectra/HO105 image check.xlsx' # working for Erik
+image_check_path <- path.expand('~/Studie/Thesis - Local/spatstat_vectra/HO105 image check.xlsx') # working for Erik
 
 
-#### renaming all files in directory with '_1_', '_2_', '_3_' and '_4_' (replace with '_') ####
-all_files_x_ = list.files(base_path, pattern =  'HO105-',full.names = TRUE)
-names_with_x_ = list.files(base_path, pattern =  'HO105-[0-9]+_[0-9]_',full.names = TRUE)
-
-if (length(names_with_x_)>0){
-    new_names = str_replace_all(all_files_x_, pattern = '_[0-9]_', replacement = '\\_')
-    warning(paste('file names have been renamed in the current directory',getwd()))
-    rename_log = file.rename(all_files_x_, new_names)
-}
+# all_files_x_ = rownames(base_path, pattern =  'HO105-',full.names = TRUE)
+# names_with_x_ = list.files(base_path, pattern =  'HO105-[0-9]+_[0-9]_',full.names = TRUE)
+# 
+# if (length(names_with_x_)>0){
+#     new_names = str_replace_all(all_files_x_, pattern = '_[0-9]_', replacement = '\\_')
+#     warning(paste('file names have been renamed in the current directory',getwd()))
+#     rename_log = file.rename(all_files_x_, new_names)
+# }
 
 
 
@@ -153,8 +152,8 @@ if (length(names_with_x_)>0){
 
 #### Read file for selected images by Marit ####
 HO105_image_check <- read_excel(image_check_path)
-
 HOnrs_unfil = HO105_image_check$`HO105 nr`
+
 tumor_images_data_unfil = HO105_image_check$`Tumor images`
 # get the MSI's through regex finding: open bracket->MSI numbers->comma->MSI numbers-> closed bracket
 tumor_images_unfil = str_extract_all(tumor_images_data_unfil,'\\[[0-9]+,[0-9]+\\]')
@@ -170,61 +169,128 @@ sample_names_marit_str = unlist(sample_names_marit)
 length(sample_names_marit_str)
 
 
+border_images_data_unfil = HO105_image_check$`Border images (% border)`
+# get the MSI's through regex finding: open closed bracket->MSI numbers->comma->MSI numbers-> closed closed bracket
+border_images_unfil = str_extract_all(border_images_data_unfil,'\\[[0-9]+,[0-9]+\\]')
+# create filter to check for non empty content
+non_empty_border = !sapply(border_images_unfil,is_empty)
+# create filtered tumor_images and HOnrs
+border_images = border_images_unfil[non_empty_border]
+HOnrs_border = HOnrs_unfil[non_empty_border]
+names(border_images) = HOnrs_border
 
-#### check if the component data and segmentation data are one to one ####
-# # find all files of HO105
-# all_files = list.files(base_path, pattern =  'HO105-')
-
-## find all available component data of HO105
-available_comp_tif = list.files(base_path, pattern = '_component_data.tif')
-# find the sample names of all available component data
-available_comp = lapply(available_comp_tif, function(x) gsub('_component_data.tif','',x))
-available_comp_str = unlist(available_comp)
-length(available_comp_str)
-
-## find all available segmentation data of HO105
-available_seg_txt = list.files(base_path, pattern = '_cell_seg_data.txt')
-# find the sample names of the all available segmentation data
-available_seg = lapply(available_seg_txt, function(x) gsub('_cell_seg_data.txt','',x))
-available_seg_str = unlist(available_seg)
-length(available_seg_str)
-
-
-# take intersection to retrieve the matching names with the data from Marits file
-matching_names_marit = intersect(sample_names_marit_str,available_comp_str)
-length(matching_names_marit)
-
-# take the difference to retrieve the sample names of the missing component data
-diff_available_comp = setdiff(sample_names_marit_str,available_comp_str)
-length(diff_available_comp)
-
-#take set difference of names of actual available components and names of components of 
-diff_available_seg = setdiff(sample_names_marit_str,available_seg_str)
-length(diff_available_seg)
+# #### check if the component data and segmentation data are one to one ####
+# # # find all files of HO105
+# # all_files = list.files(base_path, pattern =  'HO105-')
+# 
+# ## find all available component data of HO105
+# available_comp_tif = list.files(base_path, pattern = '_component_data.tif')
+# # find the sample names of all available component data
+# available_comp = lapply(available_comp_tif, function(x) gsub('_component_data.tif','',x))
+# available_comp_str = unlist(available_comp)
+# length(available_comp_str)
+# 
+# ## find all available segmentation data of HO105
+# available_seg_txt = list.files(base_path, pattern = '_cell_seg_data.txt')
+# # find the sample names of the all available segmentation data
+# available_seg = lapply(available_seg_txt, function(x) gsub('_cell_seg_data.txt','',x))
+# available_seg_str = unlist(available_seg)
+# length(available_seg_str)
 
 
-pathcombi = paste0(base_path,matching_names_marit,'_cell_seg_data.txt')
+# # take intersection to retrieve the matching names with the data from Marits file
+# matching_names_marit = intersect(sample_names_marit_str,available_comp_str)
+# length(matching_names_marit)
+# 
+# # take the difference to retrieve the sample names of the missing component data
+# diff_available_comp = setdiff(sample_names_marit_str,available_comp_str)
+# length(diff_available_comp)
+# 
+# #take set difference of names of actual available components and names of components of 
+# diff_available_seg = setdiff(sample_names_marit_str,available_seg_str)
+# length(diff_available_seg)
 
 
-# Plot variables
 
-plotter_sample = TRUE
-plotter_quadrat = TRUE
-plotter_alltypes = TRUE
 
-plotter = list(plotter_sample, plotter_quadrat, plotter_alltypes)
+```
 
-# Select spatial statistics, of NULL then all statistics are selected
-selected_spatstat_statistics = NULL
+```{r clinical vs prediction data}
+source('spatstat_vectra.R')
 
-outputs = list()
-for (file in pathcombi){
-	print(paste('procesing', file))
-    
-  	samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(file, '/')[[1]],1))
-	outputs[[samplename]] = do_analyse(seg_path = file, PhenoOrder = phenotype_simple, ColsOrder = color_simple,
-                      XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype',
-                      sample_name = samplename, plotter = plotter, fig.prefix = fig.prefix.simple,
-                      r_vec = r_vec, spatstat_statistics = selected_spatstat_statistics)
+# import simplified matrix
+
+feature_matrix_simple = readRDS(path.expand('~/Studie/Thesis - Local/feature_matrix_simple.RDS'))
+
+stop()
+#### renaming rownames in simplified matrix with '_1_', '_2_', '_3_' and '_4_' (replace with '_') ####
+all_rownames = rownames(feature_matrix_simple)
+all_rownames = str_replace_all(all_rownames, pattern = '\\_[0-9]\\_', replacement = '\\_')
+
+rownames(feature_matrix_simple) = all_rownames
+
+
+# match_indices = match(sample_names_marit_str,all_rownames)
+# feature_matrix_simple_tumor = feature_matrix_simple[match_indices,]
+# 
+# saveRDS(feature_matrix_simple_tumor, file = 'feature_matrix_simple_tumor.RDS')
+# stop('joe')
+
+
+
+mat_simple_allpatients_complete_cases_mean = statisticPerPatient(feature_matrix_simple, statistic = 'mean', na.handler = 'complete_cases')
+# apply(feature_matrix_simple,1,function(x) sum(is.na(x))) if all bigger than 0, then every sample has NA's in them, so no complete cases exist
+mat_simple_allpatients_ignore_na_mean = statisticPerPatient(feature_matrix_simple, statistic = 'mean', na.handler = 'ignore_na')
+# apply(mat_simple_allpatients_ignore_na_mean,1,function(x) sum(is.na(x))) NA's are not a problem in this setting
+
+mat_simple_allpatients_complete_cases_median = statisticPerPatient(feature_matrix_simple, statistic = 'median', na.handler = 'complete_cases')
+# apply(feature_matrix_simple,1,function(x) sum(is.na(x))) if all bigger than 0, then every sample has NA's in them, so no complete cases exist
+mat_simple_allpatients_ignore_na_median = statisticPerPatient(feature_matrix_simple, statistic = 'median', na.handler = 'ignore_na') 
+
+
+
+#### finding the the widths for significance band of each feature per patient
+
+# feature_matrix_simple = M
+uni_stats = unique(str_subset(colnames(feature_matrix_simple), '_radius'))
+
+
+spats_unnorm = str_subset(uni_stats, 'Normalized',negate = TRUE)
+m = matrix(NA,nrow = length(rownames(feature_matrix_simple)), ncol = length(spats_unnorm))
+rownames(m) = rownames(feature_matrix_simple)
+colnames(m) = spats_unnorm
+
+for (patient in rownames(feature_matrix_simple)){
+  for (stat in spats_unnorm){
+    unnorm = feature_matrix_simple[patient,stat]
+    nnorm = feature_matrix_simple[patient,paste0('Normalized_',stat)]
+    width_sign_band = unnorm/nnorm
+    m[patient,stat] = width_sign_band
+  }
 }
+
+width_sign_band_min = apply(m,1,function(x) min(x,na.rm = TRUE))
+width_sign_band_max = apply(m,1,function(x) max(x,na.rm = TRUE))
+
+# min(width_sign_band_min) = 2.556935e-05
+# max(width_sign_band_max) = 172298.4
+
+
+# m = matrix(1:36,nrow = 6)
+# rownames(m) = list('HO105-097_[9517,43652]', 'HO105-097_[8938,43999]', 'HO105-097_[11295,45384]', 'HO105-121_[8016,47627]', 'HO105-083_[20684,34346]', 'HO105-083_[14332,34366]')
+# colnames(m) = letters[1:6]
+# m[4] = NA
+# mat = m
+
+# NaN -> apply(matrix(c(NA,1:4),nrow = 1),2, mean, na.rm = TRUE)
+
+
+#### function link Clinical data to prediction data ####
+
+# clinical
+
+
+
+
+
 ```
