@@ -32,8 +32,8 @@ print(file.path(path_script, 'spatstat_vectra.R'))
 source(file.path(path_script, 'spatstat_vectra.R'))
 
 
-# procesing segmentation file
-print(paste('procesing', infile))
+# processing segmentation file
+print(paste('processing', infile))
 
 # extract sample name
 samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(infile, '/')[[1]],1))
