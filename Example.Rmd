@@ -32,7 +32,7 @@ names(color_complete) = phenotype_complete
 
 fig.prefix.complete = './complete'
 
-r_vec = c(20,100)
+r_vec = c(30,40,50)
 
 
 phenotype_simple = list(Macrophage = c("CD163+PDL1-","CD163+PDL1+"),
@@ -89,21 +89,11 @@ selected_spatstat_statistics = 'ALL' # 'ALL', NULL, list('Gdot', 'K')
 
 # debug
 
-extreme = file.path(base_path,'HO105-061_[11807,41972]_cell_seg_data.txt')
+# extreme = file.path(base_path,'HO105-061_[11807,41972]_cell_seg_data.txt')
 
-# extreme = c(extreme[3],D[8])
-# samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(extreme, '/')[[1]],1))
-# seg_path = extreme
-# PhenoOrder = phenotype_simple
-# ColsOrder = color_simple
-# XposCol = 'Cell X Position'
-# YposCol = 'Cell Y Position'
-# PhenoCol = 'Phenotype'
-# sample_name = samplename
-# plotter = plotter
-# fig.prefix = fig.prefix.simple
-# r_vec = r_vec
-# spatstat_statistics = selected_spatstat_statistics
+extreme = c(extreme[3],D[8])
+
+# extreme = file.path(base_path, paste0(c(sixes_names, threes_names),'_cell_seg_data.txt'))
 
 outputs_auto = list()
 for (file in extreme){
@@ -118,7 +108,7 @@ for (file in extreme){
 
 saveRDS(outputs_auto, file = 'feature_matrix_output.RDS')
 M = feature_extract(outputs = outputs_auto)
-write.csv(x = M,file = file.path(fig.prefix.simple, 'feature_matrix.csv'))
+# write.csv(x = M,file = file.path(fig.prefix.simple, 'feature_matrix.csv'))
 ```
 
 
@@ -222,8 +212,33 @@ source('spatstat_vectra.R')
 
 # import simplified matrix
 
-feature_matrix_simple = readRDS(path.expand('~/Studie/Thesis - Local/feature_matrix_simple.RDS'))
+feature_matrix_simple = readRDS(path.expand('~/Studie/Thesis - Local/Extracted_Features_22ndJun.RDS'))
 
+cols_without_J = str_subset(colnames(feature_matrix_simple),'J_radius', negate = TRUE)
+cols_without_Jdot = str_subset(colnames(feature_matrix_simple),'Jdot_radius', negate = TRUE)
+cols_without_J_Total = intersect(cols_without_J, cols_without_Jdot)
+feature_matrix_simple_without_J = feature_matrix_simple[,cols_without_J_Total]
+
+# View(rowSums((is.na(feature_matrix_simple_without_J))))
+# View(colSums((is.na(feature_matrix_simple_without_J)))) # 22 = 14 + 8 times MED_min_Tcells_Tcells == NA
+# View(colSums((feature_matrix_simple_without_J ==0))) # 14 times 0 Tcells
+# View(colSums((feature_matrix_simple_without_J ==1))) # 8 times 1 Tcell
+
+NAs_per_sample = rowSums((is.na(feature_matrix_simple_without_J)))
+# View(feature_matrix_simple_without_J[rowSums((is.na(feature_matrix_simple_without_J)))>0,])
+df_and_NAs = cbind(NAs_per_sample,feature_matrix_simple_without_J)
+View(df_and_NAs)
+
+# 541 NAs is when a phenotype count has 0
+# 26 NAs is when a phenotype count has 1
+# 6 and 3 NAs is when a phenotype as extensively many counts.
+
+# samples with 3 NA's have loooooooots of TUmors and results in a Fstatistic of NA for large radi: 30,40,50
+threes = df_and_NAs[threes_names <- c('HO105-033_[20154,47207]','HO105-183_[10192,36437]', 'HO105-183_[11016,38792]', 'HO105-183_[15933,32458]', 'HO105-183_[16366,40912]', 'HO105-183_[18063,33897]',  'HO105-183_[9034,45388]'),] # test for F30,40,50 ook normalized geeft daardoor 0
+# samples with 6 NA's have
+sixes = df_and_NAs[sixes_names <- 'HO105-061_[11807,41972]',] # test for F30,40,50 ook normalized geeft daardoor 0
+
+# samples with 26 NA's have a count of 1 for a phenotype
 stop()
 #### renaming rownames in simplified matrix with '_1_', '_2_', '_3_' and '_4_' (replace with '_') ####
 all_rownames = rownames(feature_matrix_simple)
@@ -287,12 +302,5 @@ width_sign_band_max = apply(m,1,function(x) max(x,na.rm = TRUE))
 # NaN -> apply(matrix(c(NA,1:4),nrow = 1),2, mean, na.rm = TRUE)
 
 
-#### function link Clinical data to prediction data ####
-
-# clinical
-
-
-
-
-
 ```
+
