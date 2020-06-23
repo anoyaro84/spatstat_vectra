@@ -549,7 +549,7 @@ interpolate_r <- function(all_types, r_vec, spatstat_statistic){
 feature_extract <- function(outputs){
   
   cat('begin feature extraction', fill = TRUE)
-  browser()
+  #browser()
   spatstat_statistics_available = outputs[[1]][['statistic_close_list']]
   if (!is.null(spatstat_statistics_available)){
     functions = c()
