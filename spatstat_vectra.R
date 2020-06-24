@@ -463,29 +463,30 @@ interpolate_r <- function(all_types, r_vec, spatstat_statistic){
         r_max = max(r_emperic)
         
         higher_bound = statistic_pairwise_phenotypes[["hi"]]
-        high_max = higher_bound[r_max]
+        high_max = higher_bound[r_emperic == r_max]
         
         lower_bound = statistic_pairwise_phenotypes[["lo"]]
-        low_max = lower_bound[r_max]
+        low_max = lower_bound[r_emperic == r_max]
         
-        stat_max = statistic_pairwise_phenotypes[["obs"]][r_max]
+        stat_obs = statistic_pairwise_phenotypes[["obs"]]
+        stat_obs_max = stat_obs[r_emperic == r_max]
         
         stat_theoretic = statistic_pairwise_phenotypes[["theo"]]
-        stat_theo_max = stat_theoretic[r_max]
-        
+        stat_theo_max = stat_theoretic[r_emperic == r_max]
+        # browser()
         if(isTRUE(is.na(high_max) | is.na(low_max))){
           warning("NA in calculating significance bands so width significance band is infinit, put in 0 for normalized.\n")
           normalized = 0
         }else if (isTRUE(high_max == low_max)){
           width_eps = 10^(-5)
           warning('dividing by 0 in normalizing, normalized by the minimum width of the significance band unequal to 0 (width_eps = 10^(-5).\n')
-          normalized = (stat-stat_theo)/width_eps
+          normalized = (stat_obs_max-stat_theo_max)/width_eps
         } else{
           width = abs(high_max-low_max)
-          normalized = (stat_max-stat_theo_max)/width
+          normalized = (stat_obs_max-stat_theo_max)/width
         }
         
-        statistic_close_list[[paste("radius", r_i)]][[paste(spatstat_statistic, "fns which",index_pairwise)]] = stat_max - stat_theo_max
+        statistic_close_list[[paste("radius", r_i)]][[paste(spatstat_statistic, "fns which",index_pairwise)]] = stat_obs_max - stat_theo_max
         normalized_list[[paste("radius", r_i)]][[paste(spatstat_statistic, "fns which",index_pairwise)]] = normalized
         
         next
@@ -549,7 +550,11 @@ interpolate_r <- function(all_types, r_vec, spatstat_statistic){
 feature_extract <- function(outputs){
   
   cat('begin feature extraction', fill = TRUE)
+<<<<<<< HEAD
   #browser()
+=======
+  
+>>>>>>> 982a5c7a80ac213b4de4a149649d8138d19e28e2
   spatstat_statistics_available = outputs[[1]][['statistic_close_list']]
   if (!is.null(spatstat_statistics_available)){
     functions = c()
