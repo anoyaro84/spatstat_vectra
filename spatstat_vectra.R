@@ -277,9 +277,9 @@ do_analyse <- function(seg_path, PhenoOrder = NULL, ColsOrder = NULL,
       cat('computing', spatstat_statistic, 'of alltypes', fill = TRUE)
       
       if (spatstat_statistic %in% list("K","L","Kdot","Ldot","pcf")){
-        all_types = alltypes(csd_ppp,fun = paste(spatstat_statistic), correction = "iso", dataname = sample_name, envelope = TRUE, verb = FALSE)
+        all_types = alltypes(csd_ppp,fun = paste(spatstat_statistic), envelope = TRUE, correction = "iso", dataname = sample_name, verb = FALSE,reuse = FALSE)
       } else {
-        all_types = alltypes(csd_ppp,fun = paste(spatstat_statistic), correction = "km", dataname = sample_name, envelope = TRUE, verb = FALSE)
+        all_types = alltypes(csd_ppp,fun = paste(spatstat_statistic), envelope = TRUE, correction = "km", dataname = sample_name, verb = FALSE,reuse = FALSE)
       }
       
       # save object for debugging

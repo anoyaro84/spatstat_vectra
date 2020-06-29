@@ -85,15 +85,15 @@ plotter_alltypes = T
 plotter = list(plotter_sample, plotter_quadrat, plotter_alltypes)
 
 # Select spatial statistics, or NULL then all inbuild spatial statistics are selected
-selected_spatstat_statistics = 'ALL' # 'ALL', NULL, list('Gdot', 'K')
+selected_spatstat_statistics = list('F') # 'ALL', NULL, list('Gdot', 'K')
 
 # debug
 
-# extreme = file.path(base_path,'HO105-061_[11807,41972]_cell_seg_data.txt')
+# extreme = file.path(base_path,'HO105-060_[6798,47366]_cell_seg_data.txt')
 
-extreme = c(extreme[3],D[8])
+# extreme = c(extreme[3],D[8])
 
-# extreme = file.path(base_path, paste0(c(sixes_names, threes_names),'_cell_seg_data.txt'))
+# extreme = file.path(base_path, paste0(c(threes_names[1]),'_cell_seg_data.txt'))
 
 outputs_auto = list()
 for (file in extreme){
@@ -106,7 +106,7 @@ for (file in extreme){
                       r_vec = r_vec, spatstat_statistics = selected_spatstat_statistics)
 }
 
-saveRDS(outputs_auto, file = 'feature_matrix_output.RDS')
+# saveRDS(outputs_auto, file = 'feature_matrix_output.RDS')
 M = feature_extract(outputs = outputs_auto)
 # write.csv(x = M,file = file.path(fig.prefix.simple, 'feature_matrix.csv'))
 ```
@@ -207,26 +207,26 @@ names(border_images) = HOnrs_border
 
 ```
 
-```{r clinical vs prediction data}
+```{r clinical vs prediction data 22nd Jun}
 source('spatstat_vectra.R')
 
 # import simplified matrix
 
-feature_matrix_simple = readRDS(path.expand('~/Studie/Thesis - Local/Extracted_Features_22ndJun.RDS'))
+feature_matrix_simple_22 = readRDS(path.expand('~/Studie/Thesis - Local/Extracted_Features_22ndJun.RDS'))
 
-cols_without_J = str_subset(colnames(feature_matrix_simple),'J_radius', negate = TRUE)
-cols_without_Jdot = str_subset(colnames(feature_matrix_simple),'Jdot_radius', negate = TRUE)
+cols_without_J = str_subset(colnames(feature_matrix_simple_22),'J_radius', negate = TRUE)
+cols_without_Jdot = str_subset(colnames(feature_matrix_simple_22),'Jdot_radius', negate = TRUE)
 cols_without_J_Total = intersect(cols_without_J, cols_without_Jdot)
-feature_matrix_simple_without_J = feature_matrix_simple[,cols_without_J_Total]
+feature_matrix_simple_22_without_J = feature_matrix_simple_22[,cols_without_J_Total]
 
-# View(rowSums((is.na(feature_matrix_simple_without_J))))
-# View(colSums((is.na(feature_matrix_simple_without_J)))) # 22 = 14 + 8 times MED_min_Tcells_Tcells == NA
-# View(colSums((feature_matrix_simple_without_J ==0))) # 14 times 0 Tcells
-# View(colSums((feature_matrix_simple_without_J ==1))) # 8 times 1 Tcell
+# View(rowSums((is.na(feature_matrix_simple_22_without_J))))
+# View(colSums((is.na(feature_matrix_simple_22_without_J)))) # 22 = 14 + 8 times MED_min_Tcells_Tcells == NA
+# View(colSums((feature_matrix_simple_22_without_J ==0))) # 14 times 0 Tcells
+# View(colSums((feature_matrix_simple_22_without_J ==1))) # 8 times 1 Tcell
 
-NAs_per_sample = rowSums((is.na(feature_matrix_simple_without_J)))
-# View(feature_matrix_simple_without_J[rowSums((is.na(feature_matrix_simple_without_J)))>0,])
-df_and_NAs = cbind(NAs_per_sample,feature_matrix_simple_without_J)
+NAs_per_sample = rowSums((is.na(feature_matrix_simple_22_without_J)))
+# View(feature_matrix_simple_22_without_J[rowSums((is.na(feature_matrix_simple_22_without_J)))>0,])
+df_and_NAs = cbind(NAs_per_sample,feature_matrix_simple_22_without_J)
 View(df_and_NAs)
 
 # 541 NAs is when a phenotype count has 0
@@ -241,46 +241,46 @@ sixes = df_and_NAs[sixes_names <- 'HO105-061_[11807,41972]',] # test for F30,40,
 # samples with 26 NA's have a count of 1 for a phenotype
 stop()
 #### renaming rownames in simplified matrix with '_1_', '_2_', '_3_' and '_4_' (replace with '_') ####
-all_rownames = rownames(feature_matrix_simple)
+all_rownames = rownames(feature_matrix_simple_22)
 all_rownames = str_replace_all(all_rownames, pattern = '\\_[0-9]\\_', replacement = '\\_')
 
-rownames(feature_matrix_simple) = all_rownames
+rownames(feature_matrix_simple_22) = all_rownames
 
 
 # match_indices = match(sample_names_marit_str,all_rownames)
-# feature_matrix_simple_tumor = feature_matrix_simple[match_indices,]
+# feature_matrix_simple_22_tumor = feature_matrix_simple_22[match_indices,]
 # 
-# saveRDS(feature_matrix_simple_tumor, file = 'feature_matrix_simple_tumor.RDS')
+# saveRDS(feature_matrix_simple_22_tumor, file = 'feature_matrix_simple_22_tumor.RDS')
 # stop('joe')
 
 
 
-mat_simple_allpatients_complete_cases_mean = statisticPerPatient(feature_matrix_simple, statistic = 'mean', na.handler = 'complete_cases')
-# apply(feature_matrix_simple,1,function(x) sum(is.na(x))) if all bigger than 0, then every sample has NA's in them, so no complete cases exist
-mat_simple_allpatients_ignore_na_mean = statisticPerPatient(feature_matrix_simple, statistic = 'mean', na.handler = 'ignore_na')
+mat_simple_allpatients_complete_cases_mean = statisticPerPatient(feature_matrix_simple_22, statistic = 'mean', na.handler = 'complete_cases')
+# apply(feature_matrix_simple_22,1,function(x) sum(is.na(x))) if all bigger than 0, then every sample has NA's in them, so no complete cases exist
+mat_simple_allpatients_ignore_na_mean = statisticPerPatient(feature_matrix_simple_22, statistic = 'mean', na.handler = 'ignore_na')
 # apply(mat_simple_allpatients_ignore_na_mean,1,function(x) sum(is.na(x))) NA's are not a problem in this setting
 
-mat_simple_allpatients_complete_cases_median = statisticPerPatient(feature_matrix_simple, statistic = 'median', na.handler = 'complete_cases')
-# apply(feature_matrix_simple,1,function(x) sum(is.na(x))) if all bigger than 0, then every sample has NA's in them, so no complete cases exist
-mat_simple_allpatients_ignore_na_median = statisticPerPatient(feature_matrix_simple, statistic = 'median', na.handler = 'ignore_na') 
+mat_simple_allpatients_complete_cases_median = statisticPerPatient(feature_matrix_simple_22, statistic = 'median', na.handler = 'complete_cases')
+# apply(feature_matrix_simple_22,1,function(x) sum(is.na(x))) if all bigger than 0, then every sample has NA's in them, so no complete cases exist
+mat_simple_allpatients_ignore_na_median = statisticPerPatient(feature_matrix_simple_22, statistic = 'median', na.handler = 'ignore_na') 
 
 
 
 #### finding the the widths for significance band of each feature per patient
 
-# feature_matrix_simple = M
-uni_stats = unique(str_subset(colnames(feature_matrix_simple), '_radius'))
+# feature_matrix_simple_22 = M
+uni_stats = unique(str_subset(colnames(feature_matrix_simple_22), '_radius'))
 
 
 spats_unnorm = str_subset(uni_stats, 'Normalized',negate = TRUE)
-m = matrix(NA,nrow = length(rownames(feature_matrix_simple)), ncol = length(spats_unnorm))
-rownames(m) = rownames(feature_matrix_simple)
+m = matrix(NA,nrow = length(rownames(feature_matrix_simple_22)), ncol = length(spats_unnorm))
+rownames(m) = rownames(feature_matrix_simple_22)
 colnames(m) = spats_unnorm
 
-for (patient in rownames(feature_matrix_simple)){
+for (patient in rownames(feature_matrix_simple_22)){
   for (stat in spats_unnorm){
-    unnorm = feature_matrix_simple[patient,stat]
-    nnorm = feature_matrix_simple[patient,paste0('Normalized_',stat)]
+    unnorm = feature_matrix_simple_22[patient,stat]
+    nnorm = feature_matrix_simple_22[patient,paste0('Normalized_',stat)]
     width_sign_band = unnorm/nnorm
     m[patient,stat] = width_sign_band
   }
@@ -301,6 +301,51 @@ width_sign_band_max = apply(m,1,function(x) max(x,na.rm = TRUE))
 
 # NaN -> apply(matrix(c(NA,1:4),nrow = 1),2, mean, na.rm = TRUE)
 
+
+```
+
+```{r clinical vs prediction data 26nd Jun}
+source('spatstat_vectra.R')
+
+# import simplified matrix
+
+feature_matrix_simple_26 = readRDS(path.expand('~/Studie/Thesis - Local/Extracted_Features_26ndJun.RDS'))
+
+NAs_per_sample_all_cols = rowSums((is.na(feature_matrix_simple_26)))
+table(NAs_per_sample_all_cols)
+# NAs_per_sample_all_cols
+#   0   3   4   7   8  10  11  12  15  16  20  24  26  30  34  38 669 672 675 
+# 443   1 334   5 220   1   1 103   1  31  16   7   4   2   1   2   6   5   3
+df_and_NAs_all_colls = cbind(NAs_per_sample_all_cols,feature_matrix_simple_26)
+View(df_and_NAs_all_colls)
+
+
+cols_without_J = str_subset(colnames(feature_matrix_simple_26),'J_radius', negate = TRUE)
+cols_without_Jdot = str_subset(colnames(feature_matrix_simple_26),'Jdot_radius', negate = TRUE)
+cols_without_J_Total = intersect(cols_without_J, cols_without_Jdot)
+feature_matrix_simple_26_without_J = feature_matrix_simple_26[,cols_without_J_Total]
+
+
+NAs_per_sample = rowSums((is.na(feature_matrix_simple_26_without_J)))
+table(NAs_per_sample)
+#    0    3    6   26  541 
+# 1155    7    1    9   14
+# View(feature_matrix_simple_26_without_J[rowSums((is.na(feature_matrix_simple_26_without_J)))>0,])
+df_and_NAs = cbind(NAs_per_sample,feature_matrix_simple_26_without_J)
+View(df_and_NAs)
+
+# 541 NAs is when a phenotype count has 0
+# 26 NAs is when a phenotype count has 1
+# 6 and 3 NAs is when a phenotype has extensively many counts (over 4000)
+
+# samples with 3 NA's have loooooooots of TUmors and results in a Fstatistic of NA for large radi: 30,40,50
+threes = df_and_NAs[threes_names <- c('HO105-033_[20154,47207]','HO105-183_[10192,36437]', 'HO105-183_[11016,38792]', 'HO105-183_[15933,32458]', 'HO105-183_[16366,40912]', 'HO105-183_[18063,33897]',  'HO105-183_[9034,45388]'),str_subset(colnames(feature_matrix_simple_26),'F')] # test for F30,40,50 ook normalized geeft daardoor 0
+# samples with 6 NA's have
+sixes = df_and_NAs[sixes_names <- 'HO105-061_[11807,41972]',str_subset(colnames(feature_matrix_simple_26),'F')] # test for F30,40,50 ook normalized geeft daardoor 0
+
+# samples with 26 NA's have a count of 1 for a phenotype
+
+# sum(feature_matrix_simple_22 == feature_matrix_simple_26,na.rm = TRUE)+sum(is.na(feature_matrix_simple_22)) = 1186*1686 so both matrices are the same.
 
 ```
 

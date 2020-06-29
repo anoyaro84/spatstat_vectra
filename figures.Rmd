@@ -218,47 +218,75 @@ dev.off()
 getwd()
 ```
 
-```{r RUN quadratcounts}
-#OakMaple_quadratcounts
+```{r RUN emptyspace}
+# OakMaple_emptyspace
 set.seed(123456789)
 
 X = rmpoint(c(50,150))
 X1 = split(X)$'1'
 X2 = split(X)$'2'
 
-png(filename = 'fig_example_quadratcounts_X_full.png', width = 720, height = 720)
-par(oma=c(0,0,0,0))
-plot(X, main=NULL, cols  = c("blue", "red"), pch = 20)
-title(main = TeX("Marked Point Process X with 200 points in the unit square observation window "), sub = TeX('50 points of phenotype 1 and 150 point of phenotype 2'), line=0.5)
+FX = alltypes(X, 'Fest')
+FX$title =  'The Empty space function with reduced sample border correction\n for Marked Poisson Point Process X'
+
+# png(filename = 'fig_example_emptyspace_X.png', width = 1440, height = 1440)
+# layout(matrix(c(1,2,3,3), 2, 2, byrow = TRUE))
+# # par(oma=c(0,0,0,0), mar = c(2,0,3,1)+0.1)
+# plot(X1, main = NULL, cols = c("blue", "red")[1], pch = 20)
+# title(sub = TeX('50 points of phenotype 1'), line=0.5)
+# plot(X2, main = NULL, cols = c("blue", "red")[2], pch = 20)
+# title(sub = TeX('150 point of phenotype 2'), line=0.5)
+# # par(oma=c(0,0,0,0),mar = c(5,0,1,1)+0.1)
+# plot(FX,cbind(rs, theo) ~ r, xlim = c(0,0.275), samex = TRUE, legend = TRUE)
+# dev.off()
+
+
+png(filename = 'fig_example_emptyspace_X.png', width = 720, height = 480)
+par(oma=c(0,0,0,0), mfrow = c(1,2), mar = c(1,0,1,1)+0.1)
+plot(X1, main = NULL, cols = c("blue", "red")[1], pch = 20)
+title(sub = TeX('50 points of phenotype 1'), line = -1.5)
+plot(X2, main = NULL, cols = c("blue", "red")[2], pch = 20)
+title(sub = TeX('150 point of phenotype 2'), line = -1.5)
+mtext(TeX('Marked Point Process X with 200 points in the unit square observation window'), side=3, cex = 1, line=-2.5, outer=TRUE)
 dev.off()
 
-png(filename = 'fig_example_quadratcounts_X_split.png', width = 720, height = 720)
-par(oma=c(0,0,0,0))
-par(mfrow = c(1,2))
-plot(X1, main = NULL,cols = c("blue", "red")[1], pch = 20)
-plot(quadratcount(X1), add=TRUE)
-title(main = TeX("The quadratcounts of phenotype 1 of X"), sub = TeX('50 points of phenotype 1'), line=0.5)
-
-plot(X2, main=NULL, cols = c("blue", "red")[2], pch = 20)
-plot(quadratcount(X2), add=TRUE)
-title(main = TeX("The quadratcounts of phenotype 2 of X"), sub = TeX('150 points of phenotype 2'), line=0.5)
-
+png(filename = 'fig_example_emptyspace_X_func.png', width = 720, height = 480)
+par(oma=c(0,0,0,0),mar = c(5,0,1,1)+0.1)
+plot(FX,cbind(rs, theo) ~ r, xlim = c(0,0.275), samex = TRUE, legend = TRUE)
 dev.off()
-getwd()
+
+FXE = alltypes(X, 'Fest',envelope = TRUE)
+
+FXE$title =  'The Empty space function with reduced sample border correction and significance band \n for Marked Poisson Point Process X'
+
+png(filename = 'fig_example_emptyspace_X_func_env.png', width = 720, height = 480)
+par(oma=c(0,0,0,0),mar = c(5,0,1,1)+0.1)
+plot(FXE, xlim = c(0,0.275), samex = TRUE, legend = TRUE)
+# plot(FX,cbind(rs, theo) ~ r, xlim = c(0,0.275), samex = TRUE, legend = TRUE)
+# plot(envelope(X),add = TRUE)
+dev.off()
+
+
+
+Xsplit = split(X)
+
+for (i in seq_along(Xsplit)){
+  allX = alltypes(Xsplit[[i]],fun = 'Fest', correction = 'km',envelope = TRUE)
+  envX = envelope(Xsplit[[i]],fun = 'Fest', correction = 'km')
+  plot(alltypes(Xsplit[[i]],fun = 'Fest', correction = 'km',envelope = TRUE))
+  plot(envelope(Xsplit[[i]],fun = 'Fest', correction = 'km'))
+}
+
+# plot(alltypes(X,'Fest', correction = 'km', envelope = TRUE)) BAD
+
+
+
+# for (i in seq_along(Xsplit)){
+#     plot(alltypes(Xsplit[[i]],'Fest',envelope = TRUE),same)
+# }
+
 ```
 
-```{r RUN emptyspace}
-# OakMaple_emptyspace
-set.seed(123456789)
-
-par(mfrow = c(1,2))
-plot(OakMaple, main=NULL, cols=c("blue","red"),pch=20)
-title("A Marked Point Process on the distribution of Oak and Maple trees", line = 0)
-plot(Fest(OakMaple), main= NULL)
-title("The Empty Space function for the Marked Point Process", line = 0)
-plot(envelope(OakMaple,Fest))
-
-```
 ```{r NOT RUN good plot and bad plot because of too many phenotypes}
 data(lansing)
 # good plot because of 3 phenotypes
@@ -267,3 +295,20 @@ plot(alltypes(superimpose(blackoak = split(lansing)$blackoak,maple = split(lansi
 plot(alltypes(superimpose(blackoak = split(lansing)$blackoak,maple = split(lansing)$maple,hickory = split(lansing)$hickory,misc = split(lansing)$misc)),samex = TRUE)
 
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
