@@ -473,7 +473,7 @@ interpolate_r <- function(all_types, r_vec, spatstat_statistic){
         
         stat_theoretic = statistic_pairwise_phenotypes[["theo"]]
         stat_theo_max = stat_theoretic[r_emperic == r_max]
-        # browser()
+        
         if(isTRUE(is.na(high_max) | is.na(low_max))){
           warning("NA in calculating significance bands so width significance band is infinit, put in 0 for normalized.\n")
           normalized = 0
@@ -550,11 +550,7 @@ interpolate_r <- function(all_types, r_vec, spatstat_statistic){
 feature_extract <- function(outputs){
   
   cat('begin feature extraction', fill = TRUE)
-<<<<<<< HEAD
   #browser()
-=======
-  
->>>>>>> 982a5c7a80ac213b4de4a149649d8138d19e28e2
   spatstat_statistics_available = outputs[[1]][['statistic_close_list']]
   if (!is.null(spatstat_statistics_available)){
     functions = c()
