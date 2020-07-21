@@ -437,108 +437,26 @@ interpolate_r <- function(all_types, r_vec, spatstat_statistic){
     # loop over every pairwise combination of phenotypes for the statistic
     for (index_pairwise in seq_along(all_types$fns)){
       
-      statistic_pairwise_phenotypes =  all_types[["fns"]][[index_pairwise]]
-      r_emperic = statistic_pairwise_phenotypes[["r"]]
+      statistic_pairwise_phenotypes =  as.fv(all_types[["fns"]][[index_pairwise]])
       
-      # browser()
+      fstat = as.function(statistic_pairwise_phenotypes, value = fvnames(statistic_pairwise_phenotypes), extrapolate = TRUE)
       
-      # find the surrounding r values for the user defined radius
-      dif = r_emperic - r_i
-      dif_abs = abs(dif)
-      condition = match(min(dif_abs),dif_abs)
-      
-      if (dif[condition] > 0){
-        left = condition - 1
-        right = condition
-      } else{
-        left = condition
-        right = condition + 1
-      }
-      
-      # print(paste(max(r_emperic), r_i))
-      # print(max(r_emperic))
-      if (max(r_emperic)< r_i){
-        # print('inside')
-        cat('computed r interval (rmax = ', max(r_emperic),') is too small for user defined radius, used rmax as radius.\n', fill = TRUE)
-        r_max = max(r_emperic)
-        
-        higher_bound = statistic_pairwise_phenotypes[["hi"]]
-        high_max = higher_bound[r_emperic == r_max]
-        
-        lower_bound = statistic_pairwise_phenotypes[["lo"]]
-        low_max = lower_bound[r_emperic == r_max]
-        
-        stat_obs = statistic_pairwise_phenotypes[["obs"]]
-        stat_obs_max = stat_obs[r_emperic == r_max]
-        
-        stat_theoretic = statistic_pairwise_phenotypes[["theo"]]
-        stat_theo_max = stat_theoretic[r_emperic == r_max]
-        
-        if(isTRUE(is.na(high_max) | is.na(low_max))){
-          warning("NA in calculating significance bands so width significance band is infinit, put in 0 for normalized.\n")
-          normalized = 0
-        }else if (isTRUE(high_max == low_max)){
-          width_eps = 10^(-5)
-          warning('dividing by 0 in normalizing, normalized by the minimum width of the significance band unequal to 0 (width_eps = 10^(-5).\n')
-          normalized = (stat_obs_max-stat_theo_max)/width_eps
-        } else{
-          width = abs(high_max-low_max)
-          normalized = (stat_obs_max-stat_theo_max)/width
-        }
-        
-        statistic_close_list[[paste("radius", r_i)]][[paste(spatstat_statistic, "fns which",index_pairwise)]] = stat_obs_max - stat_theo_max
-        normalized_list[[paste("radius", r_i)]][[paste(spatstat_statistic, "fns which",index_pairwise)]] = normalized
-        
-        next
-      }
-      # print('after check max')
-      
-      r1 = r_emperic[left]
-      r2 = r_emperic[right]
-      
-      higher_bound = statistic_pairwise_phenotypes[["hi"]]
-      high1 = higher_bound[left]
-      high2 = higher_bound[right]
-      
-      a = (high2-high1)/(r2-r1) # y=ax+b
-      b = high2 - a*r2
-      high = a*(r_i-r2)+high2
-      
-      lower_bound = statistic_pairwise_phenotypes[["lo"]]
-      low1 = lower_bound[left]
-      low2 = lower_bound[right]
-      
-      a = (low2-low1)/(r2-r1) # y=ax+b
-      b = low2 - a*r2
-      low = a*(r_i-r2)+low2
-      
-      stat_theoretic = statistic_pairwise_phenotypes[["theo"]]
-      stat_theo1 = stat_theoretic[left]
-      stat_theo2 = stat_theoretic[right]
-      a = (stat_theo2-stat_theo1)/(r2-r1) # y=ax+b
-      b = stat_theo2 - a*r2
-      stat_theo = a*(r_i-r2)+stat_theo2
-      
-      stat1 = statistic_pairwise_phenotypes[["obs"]][left]
-      stat2 = statistic_pairwise_phenotypes[["obs"]][right]
-      a = (stat2-stat1)/(r2-r1) # y=ax+b
-      b = stat2 - a*r2
-      stat = a*(r_i-r2)+stat2
+      stat_obs = fstat(r_i,'obs')
+      stat_theo = fstat(r_i,'theo')
+      high = fstat(r_i,'hi')
+      low = fstat(r_i,'lo')
       
       
-      if(isTRUE(is.na(high) | is.na(low))){
-        warning("NA in calculating significance bands so width significance band is infinit, put in 0 for normalized.\n")
-        normalized = 0
-      }else if (isTRUE(high == low)){
+      if (isTRUE(high == low)){
         width_eps = 10^(-5)
         warning('dividing by 0 in normalizing, normalized by the minimum width of the significance band unequal to 0 (width_eps = 10^(-5).\n')
-        normalized = (stat-stat_theo)/width_eps
+        normalized = (stat_obs-stat_theo)/width_eps
       } else{
         width = abs(high-low)
-        normalized = (stat-stat_theo)/width
+        normalized = (stat_obs-stat_theo)/width
       }
       
-      statistic_close_list[[paste("radius", r_i)]][[paste(spatstat_statistic, "fns which",index_pairwise)]] = stat - stat_theo
+      statistic_close_list[[paste("radius", r_i)]][[paste(spatstat_statistic, "fns which",index_pairwise)]] = stat_obs - stat_theo
       normalized_list[[paste("radius", r_i)]][[paste(spatstat_statistic, "fns which",index_pairwise)]] = normalized
     }
   }
