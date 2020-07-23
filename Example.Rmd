@@ -49,7 +49,7 @@ fig.prefix.simple = './simple'
 
 ```{r HO105_extreme,fig.width=8, fig.height=8} 
 source('spatstat_vectra.R')
-
+# source('C:/Users/erikb/Documents/Studie/Thesis - Local/spatstat_vectra_backup_2020-05-04/spatstat_vectra 2020-07-21.R')
 extreme = file.path(base_path, c(
 		'HO105-194_[16067,37856]_cell_seg_data.txt', # PD-L1 positive cluster + Tumor cluster
 		'HO105-194_[15564,37856]_cell_seg_data.txt', # PD-L1 positive cluster + Tumor cluster
@@ -85,12 +85,16 @@ plotter_alltypes = T
 plotter = list(plotter_sample, plotter_quadrat, plotter_alltypes)
 
 # Select spatial statistics, or NULL then all inbuild spatial statistics are selected
-selected_spatstat_statistics = 'ALL' # 'ALL', NULL, list('Gdot', 'K')
+selected_spatstat_statistics = list('K') # 'ALL', NULL, list('Gdot', 'K')
 
 # debug
 
-# extreme = file.path(base_path,'HO105-060_[6798,47366]_cell_seg_data.txt')
-
+extreme = file.path(base_path,'HO105-083_[16577,32382]_cell_seg_data.txt') # Ma= 95, Ot= 129, Tc= 1, Tu= 732
+extreme = file.path(base_path,'HO105-097_[9517,43652]_cell_seg_data.txt') # Ma= 37, Ot= 198, Tc= 0, Tu= 37
+extreme = file.path(base_path,'HO105-006_[13675,45799]_cell_seg_data.txt') # Ma= 12, Ot= 386, Tc= 2, Tu= 720
+extreme = file.path(base_path,'HO105-060_[19134,52452]_cell_seg_data.txt') # Ma= 21, Ot= 404, Tc= 3, Tu= 847
+extreme = file.path(base_path,'HO105-062_[11908,48533]_cell_seg_data.txt') # Ma= 7, Ot= 224, Tc= 4, Tu= 1360
+extreme = file.path(base_path,'HO105-101_[12806,43611]_cell_seg_data.txt') # Ma= 63, Ot= 405, Tc= 5, Tu= 1264
 # extreme = c(extreme[3],D[8])
 
 # extreme = file.path(base_path, paste0(c(threes_names[1]),'_cell_seg_data.txt'))

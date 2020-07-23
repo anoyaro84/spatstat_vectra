@@ -436,31 +436,49 @@ interpolate_r <- function(all_types, r_vec, spatstat_statistic){
     
     # loop over every pairwise combination of phenotypes for the statistic
     for (index_pairwise in seq_along(all_types$fns)){
+      statistic_pairwise_phenotypes =  as.fv(all_types[["fns"]][[index_pairwise]]) 
+      # Different hardcoding maybe in future, more intuitive on which pair is selected: double loop (row,col) over phenotypes in all_types.
+      # statistic_pairwise_phenotypes =  as.fv(all_types[row,col])
+      # has implications for definition statistic_close_list, normalized_list and feature_extract-function. 
       
-      statistic_pairwise_phenotypes =  as.fv(all_types[["fns"]][[index_pairwise]])
+      # View(statistic_pairwise_phenotypes)
+      # browser()
+      ftheo = as.function(statistic_pairwise_phenotypes, value = 'theo', extrapolate = TRUE)
+      stat_theo = ftheo(r_i)
       
-      fstat = as.function(statistic_pairwise_phenotypes, value = fvnames(statistic_pairwise_phenotypes), extrapolate = TRUE)
-      
-      stat_obs = fstat(r_i,'obs')
-      stat_theo = fstat(r_i,'theo')
-      high = fstat(r_i,'hi')
-      low = fstat(r_i,'lo')
-      
-      
-      if (isTRUE(high == low)){
-        width_eps = 10^(-5)
-        warning('dividing by 0 in normalizing, normalized by the minimum width of the significance band unequal to 0 (width_eps = 10^(-5).\n')
-        normalized = (stat_obs-stat_theo)/width_eps
-      } else{
-        width = abs(high-low)
-        normalized = (stat_obs-stat_theo)/width
+      if (any(is.na(statistic_pairwise_phenotypes$obs))){
+        # NA or NaN in 'obs': too few counts in observed pattern to compute centered and normalized statistic
+        warning('NA or NaN \'obs\': too few counts in observed pattern to compute centered and normalized statistic, both set to NA\n')
+        centered = NA
+        normalized = NA
+      } else {
+        # enough counts in observed pattern to compute centered statistic
+        fobs = as.function(statistic_pairwise_phenotypes, value = 'obs', extrapolate = TRUE)
+        stat_obs = fobs(r_i)
+        centered = stat_obs-stat_theo
+        if (any(is.na(statistic_pairwise_phenotypes$lo) | is.na(statistic_pairwise_phenotypes$hi))){
+          # NA or NaN in 'lo' and/or 'hi': too few counts in observed pattern to compute normalized statistic
+          warning("NA in calculating significance bands so width significance band is infinit, normalized statistic set to 0.\n")
+          normalized = 0
+        } else {
+          # enough counts in observed pattern to compute significance band, and thus centered statistic
+          fenv = as.function(statistic_pairwise_phenotypes, value = c('lo','hi'), extrapolate = TRUE)
+          low = fenv(r_i,'lo')
+          high = fenv(r_i,'hi')
+          if (isTRUE(high == low)){
+            width_eps = 10^(-5)
+            warning('significance band width is 0, instead normalizing by width_eps = 10^(-5).\n')
+            normalized = centered/width_eps
+          } else {
+            width = abs(high-low)
+            normalized = centered/width
+          }
+        }
       }
-      
-      statistic_close_list[[paste("radius", r_i)]][[paste(spatstat_statistic, "fns which",index_pairwise)]] = stat_obs - stat_theo
+      statistic_close_list[[paste("radius", r_i)]][[paste(spatstat_statistic, "fns which",index_pairwise)]] = centered
       normalized_list[[paste("radius", r_i)]][[paste(spatstat_statistic, "fns which",index_pairwise)]] = normalized
     }
   }
-  # cat('done interpolating',spatstat_statistic, fill = TRUE)
   return(list(statistic_close_list, normalized_list))
 }
 
