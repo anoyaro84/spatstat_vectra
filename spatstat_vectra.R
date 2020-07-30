@@ -355,6 +355,7 @@ getMAD <- function(data_with_distance, pairwise_distances, pheno_vector, missing
     IDs_from = filter_from$`Cell ID`
     
     for (to in pheno_vector){
+      
       distances_min = filter_from[[paste("Distance to",to)]]
       MED_min[paste(from), paste(to)] = median(distances_min)
       MAD_min[paste(from), paste(to)] = mad(distances_min)
@@ -364,11 +365,16 @@ getMAD <- function(data_with_distance, pairwise_distances, pheno_vector, missing
       
       pairwise_to_from = pairwise_distances[IDs_from,IDs_to]
       
-      MED[paste(from), paste(to)] = median(pairwise_to_from)
-      MAD[paste(from), paste(to)] = mad(pairwise_to_from)
+      MED[paste(from), paste(to)] = median(pairwise_to_from[pairwise_to_from > 0]) # median(pairwise_to_from[pairwise_to_from > 0]
+      MAD[paste(from), paste(to)] = mad(pairwise_to_from[pairwise_to_from > 0])
+      # if(from == 'Tcells' || to == 'Tcells'){
+      #   view(pairwise_to_from)
+      #   View(list(median(pairwise_to_from),mad(pairwise_to_from)))
+      #   View(list(median(pairwise_to_from[pairwise_to_from > 0]),mad(pairwise_to_from[pairwise_to_from > 0])))
+      #   browser()
+      # }
     }
   }
-  
   
   ratio_distances = matrix(NA, nrow = 1, ncol = 5, 
                            dimnames = list(paste('Cell ID'), c('Distance Tumor to Tcell','Cell ID Tcell','Distance Tcell to Macrophage', 'Cell ID Macrophage', 'distance_ratio_Tumor_Tcell_Macrophage')))
@@ -394,7 +400,7 @@ getMAD <- function(data_with_distance, pairwise_distances, pheno_vector, missing
         distance_tcell_to_macrophage = as.numeric(tcells[which(tcells$`Cell ID` == tcell_ID), 'Distance to Macrophage'])
         ratio_distances[paste('Cell ID', tumor_ID),'Distance Tcell to Macrophage'] = distance_tcell_to_macrophage
         
-        ratio_distances[paste('Cell ID', tumor_ID),'distance_ratio_Tumor_Tcell_Macrophage'] = distance_tumor_to_tcell/distance_tcell_to_macrophage
+        ratio_distances[paste('Cell ID', tumor_ID),'distance_ratio_Tumor_Tcell_Macrophage'] = distance_tumor_to_tcell/distance_tcell_to_macrophage # spatial Score SS
       }
     }
   }

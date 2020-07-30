@@ -10,10 +10,83 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r source, echo=FALSE}
-source("spatstat_vectra.R")
+# source("spatstat_vectra.R")
+library(spatstat)
 library(latex2exp)
 ```
 
+```{r params, echo=FALSE}
+marvierkant = c(4,1.5,1,1)+0.1
+marrechthoek = c(5,0,1,1)+0.1
+marhorizontaal = c(0,1,1,0)+0.1
+
+set.seed(123456789)
+
+# Xall = rmpoint(c(50,150,10))
+# X1 = split(Xall)$'1'
+# X2 = split(Xall)$'2'
+# X3 = split(Xall)$'3'
+xmax = 100
+
+```
+
+```{r example data params, echo=FALSE}
+library(tidyverse)
+library(spatstat)
+library(spdep)
+library(remotes)
+library(tiff)
+library(phenoptr)
+# library(zoo)
+library(RColorBrewer)
+library(reshape2)
+library(latex2exp)
+
+PhenoOrder= list(Macrophage = c("CD163+PDL1-","CD163+PDL1+"),
+                      Tcells = c("CD3+CD8-PD1-", "CD3+CD8-PD1+", "CD3+CD8+PD1-", "CD3+CD8+PD1+"),
+                      Tumors = c("PAX5+PDL1-", "PAX5+PDL1+"),
+                      Others = c("Other", "Other PDL1+")
+                      )
+
+ColsOrder = c(Macrophage = "magenta", Tcells = "red", Tumors = "orange", Others = "gray")
+
+
+
+XposCol = 'Cell X Position'
+YposCol = 'Cell Y Position'
+PhenoCol = 'Phenotype'
+
+base_path <- path.expand('~/Studie/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping') # working for Erik
+extreme = file.path(base_path,'HO105-097_[9517,43652]_cell_seg_data.txt') # Ma= 37, Ot= 198, Tc= 0, Tu= 37
+Intable = purrr::map_df(extreme, read_cell_seg_data, pixels_per_micron = "auto",remove_units = FALSE)
+Intable$Phenotype[Intable$Phenotype == ""] = "Other"
+
+Intable_with_distance = Intable %>%
+    do(bind_cols(., find_nearest_distance(.)))
+cat("dimensions of the data with distances is ", dim(Intable_with_distance)[1], " times ", dim(Intable_with_distance)[2], fill = TRUE)
+
+# generate pairwise distance matrix for csd for use in getMAD
+pairwise_distance = distance_matrix(csd)
+
+csd <- Intable[, c(PhenoCol, XposCol, YposCol)]
+colnames(csd) = c('Phenotype', 'Cell X Position',  'Cell Y Position')
+
+# in ifstatement
+for (pheno in names(PhenoOrder)) {
+  csd$Phenotype[csd$Phenotype %in% PhenoOrder[[pheno]]] = pheno
+  Intable$Phenotype[Intable$Phenotype %in% PhenoOrder[[pheno]]] = pheno
+}
+pheno_vector = unique(csd$Phenotype)
+colors_phenotype = ColsOrder
+
+
+
+Xall = ppp(x=csd[[XposCol]], y=csd[[YposCol]], 
+              window = owin(c(min(csd[[XposCol]]), max(csd[[XposCol]])), c(min(csd[[YposCol]]), max(csd[[YposCol]]))),
+              marks = factor(x = csd[[PhenoCol]], levels = pheno_vector)) #sort? pheno_vector[order(match(pheno_vector,names(PhenoOrder)))]
+              # marks = factor(x = csd[[PhenoCol]], levels = names(PhenoOrder))) #sort? names(PhenoOrder)[order(match(names(PhenoOrder),pheno_vector))]
+unitname(Xall) = list("micron", "microns", 1)
+```
 
 ```{r RUN OakMaple50}
 # from https://stackoverflow.com/questions/57434048/how-to-save-ppp-planer-point-pattern-dataframe-or-a-hyperframe-created-from-di
@@ -106,16 +179,16 @@ unitname(Y) = unitname(X)
 
 
 
-png(filename = 'fig_counter_example_count_statistic_X.png', width = 720, height = 720)
+# png(filename = 'fig_counter_example_count_statistic_X.png', width = 720, height = 720)
 par(oma=c(0,0,0,0))
 plot(X, main = "",cols = c("blue", "red"),  pch = 20, cex = 1.5)
 title(main = TeX('Marked Poisson Point Process X with 200 points'), sub = TeX('50 points of phenotype 1 and 150 point of phenotype 2'),line = 0.5)
-dev.off()
-png(filename = 'fig_counter_example_count_statistic_Y.png', width = 720, height = 720)
+# dev.off()
+# png(filename = 'fig_counter_example_count_statistic_Y.png', width = 720, height = 720)
 par(oma=c(0,0,0,0))
 plot(Y, main = "",cols = c("blue", "red"),  pch = 20, cex = 1.5)
 title(main = TeX('Marked Poisson Point Process Y with 51 points'), sub = TeX('50 points of phenotype 1 and 1 point of phenotype 2'),line = 0.5)
-dev.off()
+# dev.off()
 
 getwd()
 
@@ -137,16 +210,16 @@ Window(Z) = square(r=2)
 
 
 
-png(filename = 'fig_counter_example_count_area_X.png', width = 720, height = 720)
+# png(filename = 'fig_counter_example_count_area_X.png', width = 720, height = 720)
 par(oma=c(0,0,0,0))
 plot(X, main = "",cols = c("blue", "red"),  pch = 20, cex = 2)
 title(main = TeX('Marked Poisson Point Process X with 200 points in the unit square observation window'), sub = TeX('50 points of phenotype 1 and 150 point of phenotype 2'),line = 0.5)
-dev.off()
-png(filename = 'fig_counter_example_count_area_Z.png', width = 720, height = 720)
+# dev.off()
+# png(filename = 'fig_counter_example_count_area_Z.png', width = 720, height = 720)
 par(oma=c(0,0,0,0))
 plot(Z, main = "",cols = c("blue", "red"),  pch = 20, cex = 2)
 title(main = TeX('Marked Poisson Point Process Z with 200 points in a $2 \\times 2$ units observation window'), sub = TeX('50 points of phenotype 1 and 150 point of phenotype 2'),line = 0.5)
-dev.off()
+# dev.off()
 
 getwd()
 
@@ -157,6 +230,7 @@ getwd()
 
 #plot(Kest(homo)$theo~Kest(homo)$r)
 ```
+
 ```{r RUN example pairwise relative count statistic}
 # counts and area
 set.seed(123456789)
@@ -170,16 +244,16 @@ W3 =split(W23)$'3'
 W = superimpose('1' =  W1,'2' =  W2,'3' =  W3)
 
 
-png(filename = 'fig_example_pairwise_relative_count_V.png', width = 720, height = 720)
+# png(filename = 'fig_example_pairwise_relative_count_V.png', width = 720, height = 720)
 par(oma=c(0,0,0,0))
 plot(V, main = "", cols = c("blue", "red",'green'),  pch = 20, cex = 2)
 title(main = TeX('Marked Poisson Point Process V with 70 points in the unit square observation window'), sub = TeX('10 points of phenotype 1, 50 point of phenotype 2 and 10 points of phenotype 3'), line = 0.5)
-dev.off()
-png(filename = 'fig_example_pairwise_relative_count_W.png', width = 720, height = 720)
+# dev.off()
+# png(filename = 'fig_example_pairwise_relative_count_W.png', width = 720, height = 720)
 par(oma=c(0,0,0,0))
 plot(W, main = "", cols = c("blue", "red",'green'),  pch = 20, cex = 2)
 title(main = TeX('Marked Poisson Point Process V with 70 points in the unit square observation window'), sub = TeX('10 points of phenotype 1, 20 point of phenotype 2 and 40 points of phenotype 3'),line = 0.5)
-dev.off()
+# dev.off()
 
 getwd()
 
@@ -200,7 +274,7 @@ X = rmpoint(c(50,150))
 X1 = split(X)$'1'
 X2 = split(X)$'2'
 par(oma=c(0,0,0,0))
-png(filename = 'fig_example_quadratcounts_X.png', width = 720, height = 720)
+# png(filename = 'fig_example_quadratcounts_X.png', width = 720, height = 720)
 layout(matrix(c(1,1,2,3), 2, 2, byrow = TRUE))
 par(oma=c(0,0,0,0))
 plot(X, main=NULL, cols  = c("blue", "red"), pch = 20)
@@ -214,85 +288,199 @@ plot(X2, main=NULL, cols = c("blue", "red")[2], pch = 20)
 plot(quadratcount(X2), add=TRUE)
 title(main = TeX("The quadratcounts of phenotype 2 of X"), sub = TeX('150 points of phenotype 2'), line=0.5)
 
-dev.off()
+# dev.off()
 getwd()
+
+# testX = quadrat.test(X)$statistic # = 14.5 = sum(sapply(quadrat.test(X)$residuals, function(x) x^2))
+
+
+```
+
+```{r RUN ppp spatial statistics generated}
+
+# png(filename = 'fig_example_ppp_spatial.png', width = 720, height = 480)
+par(oma=c(0,0,0,0), mfrow = c(1,3), mar = marhorizontaal)
+plot(X1, main = TeX('\\mathbf{50 points of phenotype 1}'), cols = c("blue", "red", "purple")[1], pch = 20, cex = 2)
+plot(X2, main = TeX('\\mathbf{150 point of phenotype 2}'), cols = c("blue", "red", "purple")[2], pch = 20, cex = 2)
+plot(X3, main = TeX('\\mathbf{10 points of phenotype 3}'), cols = c("blue", "red", "purple")[3], pch = 20, cex = 2)
+# dev.off()
+# mtext(TeX('Marked Point Process X with 200 points in the unit square observation window'), side=3, cex = 1, line=-2.5, outer=TRUE)
+
+```
+
+```{r RUN ppp spatial statistics data}
+
+png(filename = 'fig_example_data_X.png', width = 480, height = 240)
+par(oma=c(0,0,0,0), mfrow = c(1,1), mar = c(0,0,0,0))
+# plot(Xall, cols = unlist(colors_phenotype[levels(Xall$marks)]), xlab = "", ylab = "", main = TeX('\\mathbf{Marked Poisson Point Process reflecting an MSI with 1153 cells of three phenotypes }'), pch = 20)
+plot(Xall, cols = unlist(colors_phenotype[levels(Xall$marks)]), xlab = "", ylab = "", main = '', pch = 20)
+dev.off()
+
+Xot = split(Xall)$'Others'
+Xtu = split(Xall)$'Tumors'
+Xma = split(Xall)$'Macrophage'
+
+# png(filename = 'fig_example_data_Xsplit.png', width = 720, height = 240)
+# par(oma=c(0,0,0,0), mfrow = c(1,3), mar = marhorizontaal)
+# # plot(Xot, main = TeX('\\mathbf{198 cells of phenotype Others}'), cols = unlist(colors_phenotype[levels(Xall$marks)])['Others'], pch = 20)
+# # plot(Xtu, main = TeX('\\mathbf{918 point of phenotype Tumors}'), cols = unlist(colors_phenotype[levels(Xall$marks)])['Tumors'], pch = 20)
+# # plot(Xma, main = TeX('\\mathbf{37 points of phenotype Macrophage}'), cols = unlist(colors_phenotype[levels(Xall$marks)])['Macrophage'], pch = 20)
+# plot(Xot, main = '', cols = unlist(colors_phenotype[levels(Xall$marks)])['Others'], pch = 20)
+# plot(Xtu, main = '', cols = unlist(colors_phenotype[levels(Xall$marks)])['Tumors'], pch = 20)
+# plot(Xma, main = '', cols = unlist(colors_phenotype[levels(Xall$marks)])['Macrophage'], pch = 20)
+# dev.off()
+
+png(filename = 'fig_example_data_Xsplit1.png', width = 240, height = 240)
+par(oma=c(0,0,0,0), mfrow = c(1,1), mar = rep(0,4))
+# plot(Xot, main = TeX('\\mathbf{198 cells of phenotype Others}'), cols = unlist(colors_phenotype[levels(Xall$marks)])['Others'], pch = 20)
+# plot(Xtu, main = TeX('\\mathbf{918 point of phenotype Tumors}'), cols = unlist(colors_phenotype[levels(Xall$marks)])['Tumors'], pch = 20)
+# plot(Xma, main = TeX('\\mathbf{37 points of phenotype Macrophage}'), cols = unlist(colors_phenotype[levels(Xall$marks)])['Macrophage'], pch = 20)
+plot(Xot, main = '', cols = unlist(colors_phenotype[levels(Xall$marks)])['Others'], pch = 20)
+dev.off()
+
+png(filename = 'fig_example_data_Xsplit2.png', width = 240, height = 240)
+par(oma=c(0,0,0,0), mfrow = c(1,1), mar = rep(0,4))
+# plot(Xot, main = TeX('\\mathbf{198 cells of phenotype Others}'), cols = unlist(colors_phenotype[levels(Xall$marks)])['Others'], pch = 20)
+# plot(Xtu, main = TeX('\\mathbf{918 point of phenotype Tumors}'), cols = unlist(colors_phenotype[levels(Xall$marks)])['Tumors'], pch = 20)
+# plot(Xma, main = TeX('\\mathbf{37 points of phenotype Macrophage}'), cols = unlist(colors_phenotype[levels(Xall$marks)])['Macrophage'], pch = 20)
+plot(Xtu, main = '', cols = unlist(colors_phenotype[levels(Xall$marks)])['Tumors'], pch = 20)
+dev.off()
+
+png(filename = 'fig_example_data_Xsplit3.png', width = 240, height = 240)
+par(oma=c(0,0,0,0), mfrow = c(1,1), mar = rep(0,4))
+# plot(Xot, main = TeX('\\mathbf{198 cells of phenotype Others}'), cols = unlist(colors_phenotype[levels(Xall$marks)])['Others'], pch = 20)
+# plot(Xtu, main = TeX('\\mathbf{918 point of phenotype Tumors}'), cols = unlist(colors_phenotype[levels(Xall$marks)])['Tumors'], pch = 20)
+# plot(Xma, main = TeX('\\mathbf{37 points of phenotype Macrophage}'), cols = unlist(colors_phenotype[levels(Xall$marks)])['Macrophage'], pch = 20)
+plot(Xma, main = '', cols = unlist(colors_phenotype[levels(Xall$marks)])['Macrophage'], pch = 20)
+dev.off()
+
 ```
 
 ```{r RUN emptyspace}
-# OakMaple_emptyspace
-set.seed(123456789)
 
-X = rmpoint(c(50,150))
-X1 = split(X)$'1'
-X2 = split(X)$'2'
-
-FX = alltypes(X, 'Fest')
-FX$title =  'The Empty space function with reduced sample border correction\n for Marked Poisson Point Process X'
-
-# png(filename = 'fig_example_emptyspace_X.png', width = 1440, height = 1440)
-# layout(matrix(c(1,2,3,3), 2, 2, byrow = TRUE))
-# # par(oma=c(0,0,0,0), mar = c(2,0,3,1)+0.1)
-# plot(X1, main = NULL, cols = c("blue", "red")[1], pch = 20)
-# title(sub = TeX('50 points of phenotype 1'), line=0.5)
-# plot(X2, main = NULL, cols = c("blue", "red")[2], pch = 20)
-# title(sub = TeX('150 point of phenotype 2'), line=0.5)
-# # par(oma=c(0,0,0,0),mar = c(5,0,1,1)+0.1)
-# plot(FX,cbind(rs, theo) ~ r, xlim = c(0,0.275), samex = TRUE, legend = TRUE)
-# dev.off()
-
-
-png(filename = 'fig_example_emptyspace_X.png', width = 720, height = 480)
-par(oma=c(0,0,0,0), mfrow = c(1,2), mar = c(1,0,1,1)+0.1)
-plot(X1, main = NULL, cols = c("blue", "red")[1], pch = 20)
-title(sub = TeX('50 points of phenotype 1'), line = -1.5)
-plot(X2, main = NULL, cols = c("blue", "red")[2], pch = 20)
-title(sub = TeX('150 point of phenotype 2'), line = -1.5)
-mtext(TeX('Marked Point Process X with 200 points in the unit square observation window'), side=3, cex = 1, line=-2.5, outer=TRUE)
+# FXE = alltypes(Xall, 'Fest', envelope = TRUE, correction = "km", verb = FALSE, reuse = FALSE)
+png(filename = 'fig_example_FXE.png', width = 720, height = 480)
+par(oma=c(0,0,0,0),mar = marrechthoek, cex.lab = 1.75)
+# plot(FXE, cbind(obs,theo) ~ r,title = TeX('\\mathbf{Empty Space funtion F with significance bound}'), xlim = c(0,xmax), samex = TRUE, legend = F)
+plot(FXE, cbind(obs,theo) ~ r,title = '', xlim = c(0,xmax), samex = TRUE, legend = F, cex.outerlabels=1.75)
 dev.off()
 
-png(filename = 'fig_example_emptyspace_X_func.png', width = 720, height = 480)
-par(oma=c(0,0,0,0),mar = c(5,0,1,1)+0.1)
-plot(FX,cbind(rs, theo) ~ r, xlim = c(0,0.275), samex = TRUE, legend = TRUE)
+png(filename = 'fig_example_FXE_centered.png', width = 720, height = 480)
+par(oma=c(0,0,0,0),mar = marrechthoek, cex.lab = 1.75)
+# plot(FXE, fo = cbind(obs-theo,rep(0)) ~ r, title = TeX('\\mathbf{Centered Empty Space funtion F}'), ylab = '', xlim = c(0,xmax), samex = TRUE, cex.outerlabels=1.75)
+plot(FXE, fo = cbind(obs-theo,rep(0)) ~ r, title = '', ylab = '', xlim = c(0,xmax), samex = TRUE, cex.outerlabels=1.75)
+dev.off()
+```
+
+```{r RUN nearest neighbour}
+
+# GXE = alltypes(Xall, 'Gcross', envelope = TRUE, correction = "km", verb = FALSE, reuse = FALSE)
+png(filename = 'fig_example_GXE.png', width = 720, height = 480)
+par(oma=c(0,0,0,0),mar = marvierkant, cex.lab = 1.75)
+# plot(GXE, cbind(obs,theo) ~ r,title = TeX('\\mathbf{Nearest Neighbouring function G with significance bound}'), xlim = c(0,xmax), samex = TRUE, legend = F, cex.outerlabels=1.75)
+plot(GXE, cbind(obs,theo) ~ r,title = '', xlim = c(0,xmax), samex = TRUE, legend = F, cex.outerlabels=1.75)
 dev.off()
 
-FXE = alltypes(X, 'Fest',envelope = TRUE)
-
-FXE$title =  'The Empty space function with reduced sample border correction and significance band \n for Marked Poisson Point Process X'
-
-png(filename = 'fig_example_emptyspace_X_func_env.png', width = 720, height = 480)
-par(oma=c(0,0,0,0),mar = c(5,0,1,1)+0.1)
-plot(FXE, xlim = c(0,0.275), samex = TRUE, legend = TRUE)
-# plot(FX,cbind(rs, theo) ~ r, xlim = c(0,0.275), samex = TRUE, legend = TRUE)
-# plot(envelope(X),add = TRUE)
+png(filename = 'fig_example_GXE_centered.png', width = 720, height = 480)
+par(oma=c(0,0,0,0),mar = marvierkant, cex.lab = 1.75)
+# plot(GXE, fo = cbind(obs-theo,rep(0)) ~ r, title = TeX('\\mathbf{Centered Nearest Neighbouring funtion G}'), ylab = '', xlim = c(0,xmax), samex = TRUE, cex.outerlabels=1.75)
+plot(GXE, fo = cbind(obs-theo,rep(0)) ~ r, title = '', ylab = '', xlim = c(0,xmax), samex = TRUE, cex.outerlabels=1.75)
 dev.off()
 
+# GdotXE = alltypes(Xall, 'Gdot', envelope = TRUE, correction = "km", verb = FALSE, reuse = FALSE)
+png(filename = 'fig_example_GdotXE.png', width = 720, height = 480)
+par(oma=c(0,0,0,0),mar = marvierkant, cex.lab = 1.75)
+# plot(GdotXE, cbind(obs,theo) ~ r,title = TeX('\\mathbf{Nearest Neighbouring function Gdot with significance bound}'), samex = TRUE, legend = F, cex.outerlabels=1.75)
+plot(GdotXE, cbind(obs,theo) ~ r,title = '', samex = TRUE, legend = F, cex.outerlabels=1.75)
+dev.off()
 
+png(filename = 'fig_example_GdotXE_centered.png', width = 720, height = 480)
+par(oma=c(0,0,0,0),mar = marvierkant, cex.lab = 1.75)
+# plot(GdotXE, fo = cbind(obs-theo,rep(0)) ~ r, title = TeX('\\mathbf{Centered Nearest Neighbouring funtion Gdot}'), ylab = '', samex = TRUE, cex.outerlabels=1.75)
+plot(GdotXE, fo = cbind(obs-theo,rep(0)) ~ r, title = '', ylab = '', samex = TRUE, cex.outerlabels=1.75)
+dev.off()
+```
 
-Xsplit = split(X)
+```{r RUN K}
 
-for (i in seq_along(Xsplit)){
-  allX = alltypes(Xsplit[[i]],fun = 'Fest', correction = 'km',envelope = TRUE)
-  envX = envelope(Xsplit[[i]],fun = 'Fest', correction = 'km')
-  plot(alltypes(Xsplit[[i]],fun = 'Fest', correction = 'km',envelope = TRUE))
-  plot(envelope(Xsplit[[i]],fun = 'Fest', correction = 'km'))
-}
+# KXE = alltypes(Xall, 'Kcross', envelope = TRUE, correction = "iso", verb = FALSE, reuse = FALSE)
+png(filename = 'fig_example_KXE.png', width = 720, height = 480)
+par(oma=c(0,0,0,0),mar = marvierkant, cex.lab = 1.75)
+# plot(KXE, cbind(obs,theo) ~ r,title = TeX('\\mathbf{Ripley\'s K-function with significance bound}'), xlim = c(0,xmax), samex = TRUE, legend = F, cex.outerlabels=1.75)
+plot(KXE, cbind(obs,theo) ~ r,title = '', xlim = c(0,xmax), samex = TRUE, legend = F, cex.outerlabels=1.75)
+dev.off()
 
-# plot(alltypes(X,'Fest', correction = 'km', envelope = TRUE)) BAD
+png(filename = 'fig_example_KXE_centered.png', width = 720, height = 480)
+par(oma=c(0,0,0,0),mar = marvierkant, cex.lab = 1.75)
+# plot(KXE, fo = cbind(obs-theo,rep(0)) ~ r, title = TeX('\\mathbf{Centered Ripley\'s K-function}'), ylab = '', xlim = c(0,xmax), samex = TRUE, cex.outerlabels=1.75)
+plot(KXE, fo = cbind(obs-theo,rep(0)) ~ r, title = '', ylab = '', xlim = c(0,xmax), samex = TRUE, cex.outerlabels=1.75)
+dev.off()
 
+# KdotXE = alltypes(Xall, 'Kdot', envelope = TRUE, correction = "iso", verb = FALSE, reuse = FALSE)
+png(filename = 'fig_example_KdotXE.png', width = 720, height = 480)
+par(oma=c(0,0,0,0),mar = marvierkant, cex.lab = 1.75)
+# plot(KdotXE, cbind(obs,theo) ~ r,title = TeX('\\mathbf{Ripley\'s Kdot-function with significance bound}'), xlim = c(0,xmax), samex = TRUE, legend = F, cex.outerlabels=1.75)
+plot(KdotXE, cbind(obs,theo) ~ r,title = '', xlim = c(0,xmax), samex = TRUE, legend = F, cex.outerlabels=1.75)
+dev.off()
 
+png(filename = 'fig_example_KdotXE_centered.png', width = 720, height = 480)
+par(oma=c(0,0,0,0),mar = marvierkant, cex.lab = 1.75)
+# plot(KdotXE, fo = cbind(obs-theo,rep(0)) ~ r, title = TeX('\\mathbf{Centered Ripley\'s Kdot-function}'), ylab = '', xlim = c(0,xmax), samex = TRUE, cex.outerlabels=1.75)
+plot(KdotXE, fo = cbind(obs-theo,rep(0)) ~ r, title = '', ylab = '', xlim = c(0,xmax), samex = TRUE, cex.outerlabels=1.75)
+dev.off()
+```
 
-# for (i in seq_along(Xsplit)){
-#     plot(alltypes(Xsplit[[i]],'Fest',envelope = TRUE),same)
-# }
+```{r RUN L}
 
+# LXE = alltypes(Xall, 'Lcross', envelope = TRUE, correction = "iso", verb = FALSE, reuse = FALSE)
+png(filename = 'fig_example_LXE.png', width = 720, height = 480)
+par(oma=c(0,0,0,0),mar = marvierkant, cex.lab = 1.75)
+# plot(LXE, cbind(obs,theo) ~ r,title = TeX('\\mathbf{Ripley\'s L-function with significance bound}'), xlim = c(0,xmax), samex = TRUE, legend = F, cex.outerlabels=1.75)
+plot(LXE, cbind(obs,theo) ~ r,title = '', xlim = c(0,xmax), samex = TRUE, legend = F, cex.outerlabels=1.75)
+dev.off()
+
+png(filename = 'fig_example_LXE_centered.png', width = 720, height = 480)
+par(oma=c(0,0,0,0),mar = marvierkant, cex.lab = 1.75)
+# plot(LXE, fo = cbind(obs-theo,rep(0)) ~ r, title = TeX('\\mathbf{Centered Ripley\'s L-function}'), ylab = '', xlim = c(0,xmax), samex = TRUE, cex.outerlabels=1.75)
+plot(LXE, fo = cbind(obs-theo,rep(0)) ~ r, title = '', ylab = '', xlim = c(0,xmax), samex = TRUE, cex.outerlabels=1.75)
+dev.off()
+
+# LdotXE = alltypes(Xall, 'Ldot', envelope = TRUE, correction = "iso", verb = FALSE, reuse = FALSE)
+png(filename = 'fig_example_LdotXE.png', width = 720, height = 480)
+par(oma=c(0,0,0,0),mar = marvierkant, cex.lab = 1.75)
+# plot(LdotXE, cbind(obs,theo) ~ r,title = TeX('\\mathbf{Ripley\'s Ldot-function with significance bound}'), xlim = c(0,xmax), samex = TRUE, legend = F, cex.outerlabels=1.75)
+plot(LdotXE, cbind(obs,theo) ~ r,title = '', xlim = c(0,xmax), samex = TRUE, legend = F, cex.outerlabels=1.75)
+dev.off()
+
+png(filename = 'fig_example_LdotXE_centered.png', width = 720, height = 480)
+par(oma=c(0,0,0,0),mar = marvierkant, cex.lab = 1.75)
+# plot(LdotXE, fo = cbind(obs-theo,rep(0)) ~ r, title = TeX('\\mathbf{Centered Ripley\'s Ldot-function}'), ylab = '', xlim = c(0,xmax), samex = TRUE, cex.outerlabels=1.75)
+plot(LdotXE, fo = cbind(obs-theo,rep(0)) ~ r, title = '', ylab = '', xlim = c(0,xmax), samex = TRUE, cex.outerlabels=1.75)
+dev.off()
+```
+
+```{r RUN pcf}
+
+# pcfXE = alltypes(Xall, 'pcfcross', envelope = TRUE, correction = "iso", verb = FALSE, reuse = FALSE)
+png(filename = 'fig_example_pcfXE.png', width = 720, height = 480)
+par(oma=c(0,0,0,0),mar = marvierkant, cex.lab = 1.75)
+# plot(pcfXE, cbind(obs,theo) ~ r,title = TeX('\\mathbf{Pair Correlation function g with significance bound}'), ylim = c(0,5), samex = TRUE, legend = F, cex.outerlabels=1.75)
+plot(pcfXE, cbind(obs,theo) ~ r,title = '', ylim = c(0,5), samex = TRUE, legend = F, cex.outerlabels=1.75)
+dev.off()
+
+png(filename = 'fig_example_pcfXE_centered.png', width = 720, height = 480)
+par(oma=c(0,0,0,0),mar = marvierkant, cex.lab = 1.75)
+# plot(pcfXE, fo = cbind(obs-theo,rep(0)) ~ r, title = TeX('\\mathbf{Centered Pair Correlation function g}'), ylab = '', ylim = c(-1,1), samex = TRUE, cex.outerlabels=1.75)
+plot(pcfXE, fo = cbind(obs-theo,rep(0)) ~ r, title = '', ylab = '', ylim = c(-1,1), samex = TRUE, cex.outerlabels=1.75)
+dev.off()
 ```
 
 ```{r NOT RUN good plot and bad plot because of too many phenotypes}
 data(lansing)
 # good plot because of 3 phenotypes
-plot(alltypes(superimpose(blackoak = split(lansing)$blackoak,maple = split(lansing)$maple,hickory = split(lansing)$hickory)), samex = TRUE)
+plot(alltypes(superimpose(blackoak = split(lansing)$blackoak,maple = split(lansing)$maple,hickory = split(lansing)$hickory)), samex = TRUE, cex.outerlabels=1.75)
 # bad plot because of 4 phenotypes
-plot(alltypes(superimpose(blackoak = split(lansing)$blackoak,maple = split(lansing)$maple,hickory = split(lansing)$hickory,misc = split(lansing)$misc)),samex = TRUE)
+plot(alltypes(superimpose(blackoak = split(lansing)$blackoak,maple = split(lansing)$maple,hickory = split(lansing)$hickory,misc = split(lansing)$misc)),samex = TRUE, cex.outerlabels=1.75)
 
 ```
 

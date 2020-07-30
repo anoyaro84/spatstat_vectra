@@ -38,6 +38,9 @@ print(paste('processing', infile))
 # extract sample name
 samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(infile, '/')[[1]],1))
 
+# set seed for reproducing
+set.seed(0)
+
 # perform analysis on segmentation file
 output = do_analyse(seg_path = infile, PhenoOrder=pheno_vector_absolut, ColsOrder=colors_absolut, 
 			XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype',
