@@ -367,12 +367,12 @@ getMAD <- function(data_with_distance, pairwise_distances, pheno_vector, missing
       
       MED[paste(from), paste(to)] = median(pairwise_to_from[pairwise_to_from > 0]) # median(pairwise_to_from[pairwise_to_from > 0]
       MAD[paste(from), paste(to)] = mad(pairwise_to_from[pairwise_to_from > 0])
-      # if(from == 'Tcells' || to == 'Tcells'){
-      #   view(pairwise_to_from)
-      #   View(list(median(pairwise_to_from),mad(pairwise_to_from)))
-      #   View(list(median(pairwise_to_from[pairwise_to_from > 0]),mad(pairwise_to_from[pairwise_to_from > 0])))
-      #   browser()
-      # }
+      if(from == 'Tcells' && to == 'Tcells'){
+        view(pairwise_to_from)
+        View(list(median(pairwise_to_from),mad(pairwise_to_from)))
+        View(list(median(pairwise_to_from[pairwise_to_from > 0]),mad(pairwise_to_from[pairwise_to_from > 0])))
+        browser()
+      }
     }
   }
   
@@ -452,9 +452,9 @@ interpolate_r <- function(all_types, r_vec, spatstat_statistic){
       ftheo = as.function(statistic_pairwise_phenotypes, value = 'theo', extrapolate = TRUE)
       stat_theo = ftheo(r_i)
       
-      if (any(is.na(statistic_pairwise_phenotypes$obs))){
+      if (any(is.na(statistic_pairwise_phenotypes$obs[-1]))){
         # NA or NaN in 'obs': too few counts in observed pattern to compute centered and normalized statistic
-        warning('NA or NaN \'obs\': too few counts in observed pattern to compute centered and normalized statistic, both set to NA\n')
+        cat('NA or NaN \'obs\': too few counts in observed pattern to compute centered and normalized statistic, both set to NA',fill = T)
         centered = NA
         normalized = NA
       } else {
@@ -462,9 +462,9 @@ interpolate_r <- function(all_types, r_vec, spatstat_statistic){
         fobs = as.function(statistic_pairwise_phenotypes, value = 'obs', extrapolate = TRUE)
         stat_obs = fobs(r_i)
         centered = stat_obs-stat_theo
-        if (any(is.na(statistic_pairwise_phenotypes$lo) | is.na(statistic_pairwise_phenotypes$hi))){
+        if (any(is.na(statistic_pairwise_phenotypes$lo[-1]) | is.na(statistic_pairwise_phenotypes$hi[-1]))){
           # NA or NaN in 'lo' and/or 'hi': too few counts in observed pattern to compute normalized statistic
-          warning("NA in calculating significance bands so width significance band is infinit, normalized statistic set to 0.\n")
+          cat("NA in calculating significance bands so width significance band is infinit, normalized statistic set to 0.", fill = T)
           normalized = 0
         } else {
           # enough counts in observed pattern to compute significance band, and thus centered statistic
@@ -473,7 +473,7 @@ interpolate_r <- function(all_types, r_vec, spatstat_statistic){
           high = fenv(r_i,'hi')
           if (isTRUE(high == low)){
             width_eps = 10^(-5)
-            warning('significance band width is 0, instead normalizing by width_eps = 10^(-5).\n')
+            cat('significance band width is 0, instead normalizing by width_eps = 10^(-5).', fill = T)
             normalized = centered/width_eps
           } else {
             width = abs(high-low)
@@ -481,6 +481,7 @@ interpolate_r <- function(all_types, r_vec, spatstat_statistic){
           }
         }
       }
+      
       statistic_close_list[[paste("radius", r_i)]][[paste(spatstat_statistic, "fns which",index_pairwise)]] = centered
       normalized_list[[paste("radius", r_i)]][[paste(spatstat_statistic, "fns which",index_pairwise)]] = normalized
     }
