@@ -367,12 +367,12 @@ getMAD <- function(data_with_distance, pairwise_distances, pheno_vector, missing
       
       MED[paste(from), paste(to)] = median(pairwise_to_from[pairwise_to_from > 0]) # median(pairwise_to_from[pairwise_to_from > 0]
       MAD[paste(from), paste(to)] = mad(pairwise_to_from[pairwise_to_from > 0])
-      if(from == 'Tcells' && to == 'Tcells'){
-        view(pairwise_to_from)
-        View(list(median(pairwise_to_from),mad(pairwise_to_from)))
-        View(list(median(pairwise_to_from[pairwise_to_from > 0]),mad(pairwise_to_from[pairwise_to_from > 0])))
-        browser()
-      }
+      #if(from == 'Tcells' && to == 'Tcells'){
+      #  view(pairwise_to_from)
+      #  View(list(median(pairwise_to_from),mad(pairwise_to_from)))
+      #  View(list(median(pairwise_to_from[pairwise_to_from > 0]),mad(pairwise_to_from[pairwise_to_from > 0])))
+      #  browser()
+      #}
     }
   }
   

@@ -47,7 +47,8 @@ output = do_analyse(seg_path = infile, PhenoOrder=pheno_vector_absolut, ColsOrde
 			sample_name = samplename, plotter = c(TRUE, TRUE,TRUE), fig.prefix = path_figure,
 			r_vec = r_vec, spatstat_statistics = 'ALL')
 
-
+print(output)
+print(length(output))
 # save outcome
 saveRDS(output, outRDS)
 
