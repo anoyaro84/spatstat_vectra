@@ -85,7 +85,7 @@ plotter_alltypes = T
 plotter = list(plotter_sample, plotter_quadrat, plotter_alltypes)
 
 # Select spatial statistics, or NULL then all inbuild spatial statistics are selected
-selected_spatstat_statistics = list("pcf") # 'ALL', NULL, list('Gdot', 'K') list("G","F", "J","Gdot", "Jdot", "K", "L", "pcf", "Kdot", "Ldot")
+selected_spatstat_statistics = list('F', "pcf") # 'ALL', NULL, list('Gdot', 'K') list("G","F", "J","Gdot", "Jdot", "K", "L", "pcf", "Kdot", "Ldot")
 
 # debug
 
@@ -98,7 +98,7 @@ extreme = file.path(base_path,'HO105-060_[19134,52452]_cell_seg_data.txt') # Ma=
 extreme = file.path(base_path,'HO105-083_[14332,34366]_cell_seg_data.txt') # 541 NA's  Ma =55 Ot=146 Tc=0 Tu=706
 
 # names(features_raw[,'counts_sample_Tcells'][features_raw[,'counts_sample_Tcells'] == 0])
-# View( Tc0 <-features_raw[names(features_raw[,'counts_sample_Tcells'][features_raw[,'counts_sample_Tcells'] == 0]),]) print(dim(Tc0));colSums(is.na(Tc0)) 15
+# View( Tc0 <-features_raw[names(features_raw[,'counts_sample_Tcells'][features_raw[,'counts_sample_Tcells'] == 0]),]); print(dim(Tc0));unique(colSums(is.na(Tc0))); 15
 # names(features_raw[,'counts_sample_Tcells'][features_raw[,'counts_sample_Tumors'] == 0])
 
 # extreme = c(extreme[3],D[8])
