@@ -50,14 +50,28 @@ PhenoOrder= list(Macrophage = c("CD163+PDL1-","CD163+PDL1+"),
 
 ColsOrder = c(Macrophage = "magenta", Tcells = "red", Tumors = "orange", Others = "gray")
 
-
+# PhenoOrder = c("CD163+PDL1-","CD163+PDL1+",
+#                        "CD3+CD8-PD1-", "CD3+CD8-PD1+", "CD3+CD8+PD1-", "CD3+CD8+PD1+",
+#                        "Other","Other PDL1+",
+#                        "PAX5+PDL1-", "PAX5+PDL1+",
+#                        "")
+# 
+# ColsOrder = list("magenta", "brown",
+#                    "red", "blue", "green", "yellow",
+#                    "gray", "pink",
+#                    "orange", "cyan",
+#                    "gray")
+# names(ColsOrder) = PhenoOrder
 
 XposCol = 'Cell X Position'
 YposCol = 'Cell Y Position'
 PhenoCol = 'Phenotype'
 
 base_path <- path.expand('~/Studie/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping') # working for Erik
-extreme = file.path(base_path,'HO105-097_[9517,43652]_cell_seg_data.txt') # Ma= 37, Ot= 198, Tc= 0, Tu= 37
+# extreme = file.path(base_path,'HO105-097_[9517,43652]_cell_seg_data.txt') # Ma= 37, Ot= 198, Tc= 0, Tu= 918
+extreme = file.path(base_path,'HO105-170_[10744,51180]_cell_seg_data.txt') # Tumor # Ma= 319, Ot= 304, Tc= 18, Tu= 876
+extreme = file.path(base_path,'HO105-170_[7979,52792]_cell_seg_data.txt') # Border Ma= 68, Ot= 1327, Tc= 22, Tu= 279
+
 Intable = purrr::map_df(extreme, read_cell_seg_data, pixels_per_micron = "auto",remove_units = FALSE)
 Intable$Phenotype[Intable$Phenotype == ""] = "Other"
 
@@ -65,11 +79,24 @@ Intable_with_distance = Intable %>%
     do(bind_cols(., find_nearest_distance(.)))
 cat("dimensions of the data with distances is ", dim(Intable_with_distance)[1], " times ", dim(Intable_with_distance)[2], fill = TRUE)
 
-# generate pairwise distance matrix for csd for use in getMAD
-pairwise_distance = distance_matrix(csd)
+
+# ggplot(data = Intable, aes(`Cell X Position`, `Cell Y Position`, color=Phenotype)) +
+#     scale_x_continuous(limits=c(min(Intable$`Cell X Position`), max(Intable$`Cell X Position`))) +
+#     scale_y_continuous(limits=c(min(Intable$`Cell Y Position`), max(Intable$`Cell Y Position`))) +
+#     # scale_y_reverse(limits=c(max(Intable$`Cell Y Position`), min(Intable$`Cell Y Position`))) +
+#     geom_point(size = 2) + coord_equal() +
+#     scale_color_manual(values=c("Macrophage"="pink", "Others"="grey",
+#                                 "Tumors"="orange")) +
+#     theme_minimal()
+
+
+
 
 csd <- Intable[, c(PhenoCol, XposCol, YposCol)]
 colnames(csd) = c('Phenotype', 'Cell X Position',  'Cell Y Position')
+
+# generate pairwise distance matrix for csd for use in getMAD
+pairwise_distance = distance_matrix(csd)
 
 # in ifstatement
 for (pheno in names(PhenoOrder)) {
@@ -80,10 +107,8 @@ pheno_vector = unique(csd$Phenotype)
 colors_phenotype = ColsOrder
 
 
-
-Xall = ppp(x=csd[[XposCol]], y=csd[[YposCol]], 
-              window = owin(c(min(csd[[XposCol]]), max(csd[[XposCol]])), c(min(csd[[YposCol]]), max(csd[[YposCol]]))),
-              marks = factor(x = csd[[PhenoCol]], levels = pheno_vector)) #sort? pheno_vector[order(match(pheno_vector,names(PhenoOrder)))]
+# X = ppp(x = csd[[XposCol]], y = csd[[YposCol]], window = owin(c(min(csd[[XposCol]]), max(csd[[XposCol]])), c(min(csd[[YposCol]]), max(csd[[YposCol]]))), marks = factor(x = csd[[PhenoCol]], levels = pheno_vector)) #sort?
+Xall = ppp(x = csd[[XposCol]], y = csd[[YposCol]]-2*abs(min(csd[[YposCol]])-csd[[YposCol]]), window = owin(c(min(csd[[XposCol]]), max(csd[[XposCol]])), c(min(csd[[YposCol]]-2*abs(min(csd[[YposCol]])-csd[[YposCol]])), max(csd[[YposCol]]-2*abs(min(csd[[YposCol]])-csd[[YposCol]])))), marks = factor(x = csd[[PhenoCol]], levels = pheno_vector)) #sort? pheno_vector[order(match(pheno_vector,names(PhenoOrder)))]
               # marks = factor(x = csd[[PhenoCol]], levels = names(PhenoOrder))) #sort? names(PhenoOrder)[order(match(names(PhenoOrder),pheno_vector))]
 unitname(Xall) = list("micron", "microns", 1)
 ```
@@ -310,7 +335,7 @@ plot(X3, main = TeX('\\mathbf{10 points of phenotype 3}'), cols = c("blue", "red
 
 ```{r RUN ppp spatial statistics data}
 
-png(filename = 'fig_example_data_X.png', width = 480, height = 240)
+png(filename = 'fig_example_data_X.png', width = 480, height = 240) # _simple, _complete, _simple_border
 par(oma=c(0,0,0,0), mfrow = c(1,1), mar = c(0,0,0,0))
 # plot(Xall, cols = unlist(colors_phenotype[levels(Xall$marks)]), xlab = "", ylab = "", main = TeX('\\mathbf{Marked Poisson Point Process reflecting an MSI with 1153 cells of three phenotypes }'), pch = 20)
 plot(Xall, cols = unlist(colors_phenotype[levels(Xall$marks)]), xlab = "", ylab = "", main = '', pch = 20)
@@ -474,6 +499,18 @@ par(oma=c(0,0,0,0),mar = marvierkant, cex.lab = 1.75)
 plot(pcfXE, fo = cbind(obs-theo,rep(0)) ~ r, title = '', ylab = '', ylim = c(-1,1), samex = TRUE, cex.outerlabels=1.75)
 dev.off()
 ```
+
+```{r RUN logistic function}
+
+lf = function(x){1/(1+exp(-x))}
+png(filename = 'fig_logistic.png')
+# par(oma=c(0,6,0,0),mar = marvierkant, cex.lab = 1.75)
+par(mar=c(5.1,4.1,4.1,2.1), oma = c(1,1,0,0), cex.lab = 1.75)
+curve(lf,from = -10, to = 10, xlab = 'x', ylab = 'y')
+dev.off()
+
+```
+
 
 ```{r NOT RUN good plot and bad plot because of too many phenotypes}
 data(lansing)

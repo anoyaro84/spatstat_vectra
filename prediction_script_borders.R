@@ -133,35 +133,40 @@ image_check_path <- path.expand('~/Studie/Thesis - Local/spatstat_vectra/HO105 t
 HO105_image_check <- read_excel(image_check_path)
 
 
-# TUMOR IMAGES
+### Borders ###
+
+# replace string 'NA' with NA in border column
+HO105_image_check$`Border images`[HO105_image_check$`Border images` == 'NA'] = rep(NA)
 # get the MSI's through regex finding: open bracket->MSI numbers->comma->MSI numbers-> closed bracket
-tumor_images_unfil = str_extract_all(HO105_image_check$`Tumor images`,'\\[[0-9]+,[0-9]+\\]')
+border_images_unfil = str_extract_all(HO105_image_check$`Border images`,'\\[[0-9]+,[0-9]+\\]')
+# create filtered border_images and HOnrs_border
+border_images = border_images_unfil[!is.na(border_images_unfil)]
+HOnrs_border = HO105_image_check$`HO105 nr`[!is.na(border_images_unfil)]
+names(border_images) = HOnrs_border
+# create string with sample names of tumor images that are checked by marit
+border_images_checked = unlist(lapply(seq_along(HOnrs_border),function(x) paste0(HOnrs_border[x],'_',unlist(border_images[HOnrs_border][x]))))
 
-# create filtered tumor_images and HOnrs
-tumor_images = tumor_images_unfil[!sapply(tumor_images_unfil,is_empty)]
-HOnrs = HO105_image_check$`HO105 nr`[!sapply(tumor_images_unfil,is_empty)]
-names(tumor_images) = HOnrs
-# create string with sample names of tumor images that are checked by biologist
-tumor_images_checked = unlist(lapply(seq_along(HOnrs),function(x) paste0(names(tumor_images)[x],'_',unlist(tumor_images[HOnrs][x]))))
+warning('these border images are missing in features matrix ', setdiff(border_images_checked,rownames(features_raw)), ' removing from borders to evaluate')
+if (!is_empty(setdiff(border_images_checked,rownames(features_raw)))){
+  border_images_checked = intersect(border_images_checked,rownames(features_raw))
+}
 
-
-warning('these MSI are missing in features matrix compared to selection by biologist ', setdiff(tumor_images_checked,rownames(features_raw)))
-features_tumor_checked = features_raw[tumor_images_checked,]
+features_border_checked = features_raw[border_images_checked,]
 
 ##### averaging features for every  patient in the feature matrix with specific NA handling
-features_tumor_checked = statisticPerPatient(features_tumor_checked, statistic = 'mean', na.handler = 'complete_cases')
+features_border_checked = statisticPerPatient(features_border_checked, statistic = 'mean', na.handler = 'complete_cases')
 
 
 
 ##### find complete patient cases in outcome and features
 patientID_outcome = names(outcome_raw[complete.cases(outcome_raw)])
-patientID_features = rownames(features_tumor_checked[complete.cases(features_tumor_checked),])
+patientID_features = rownames(features_border_checked[complete.cases(features_border_checked),])
 patientID_complete = intersect(patientID_outcome, patientID_features)
 
 
 ##### select complete patient cases outcome and features in correct syntax for prediction
 outcome_complete = outcome_raw[patientID_complete]
-features_complete = features_tumor_checked[patientID_complete,]
+features_complete = features_border_checked[patientID_complete,]
 patientID_complete = patientID_complete
 
 
@@ -240,21 +245,22 @@ for (k in 1:nrepeats) {
 }
 # threshold months is set to 6
 # mean of aucs
-# 0.7152778
+# 0.5666111
 # sd of aucs
-# 0.1191943
+# 0.1707911
 # 2.5 and 97.5 quantiles of aucs
-# 0.4861111
-# 0.9135417
+# 0.2284722
+# 0.8611111
 
 
-### 12 months
-# [1] 0.6938286
-# [1] 0.1034558
-# 2.5% 
-# 0.5 
-# 97.5% 
-# 0.8967857 
+# threshold months is set to 12
+# mean of aucs
+# 0.5699429
+# sd of aucs
+# 0.1746525
+# 2.5 and 97.5 quantiles of aucs
+# 0.2571429
+# 0.9364286
 
 
 ###### RIDGE LOGISTIC REGRESSION WITH GROUP STRUCTURE (ECPC) ######
@@ -373,43 +379,38 @@ set.seed(0)
 # ridge_outg2m6 = grouping_prediction(outcome, features, mygrouping2,threshold_months)
 ridge_outg3m6 = grouping_prediction(outcome, features, mygrouping3,threshold_months)
 saveRDS(object = ridge_outg3m6,file = 'ridge_outg3m6.RDS')
-# threshold months is set to 6
-# mean of aucs
-# 0.6944444
-# sd of aucs
-# 0.1114649
-# 2.5 and 97.5 quantiles of aucs
-# 0.4277778
-# 0.871875
-# estimated group weights
-# 0.05344425 0.3591364 0.3207154 0.1255011 0.04896886 0.04456631 0.01652118 0.03114656
+# [1] "REPEAT 8"
+# [1] "Estimate global tau^2 (equiv. global ridge penalty lambda)"
+# Error in qr.coef(qr(a, LAPACK = TRUE), b) : 
+#   error code 42 from Lapack routine 'dtrtrs'
+# In addition: Warning message:
+#   In ecpc(Y = outcome[indices_train], X = features[indices_train,  :
+#                                                      Cross-validated global penalty lambda was >10^12 and set to 100
+#                                                    Error: Matrix inversion failed. Please increase lambda1 and/or lambda2 
 # ridge_outg4m6 = grouping_prediction(outcome, features, mygrouping4,threshold_months)
 ridge_outg5m6 = grouping_prediction(outcome, features, mygrouping5,threshold_months)
 saveRDS(object = ridge_outg5m6,file = 'ridge_outg5m6.RDS')
 # threshold months is set to 6
 # mean of aucs
-# 0.7105556
+# 0.6533333
 # sd of aucs
-# 0.1061224
+# 0.1250145
 # 2.5 and 97.5 quantiles of aucs
-# 0.4892361
-# 0.8902778
+# 0.4722222
+# 0.9104167
 # estimated group weights
-# 0.4178663 0.1428505 0.06663297 0.3726502
+# 0.2517929 0.006555848 0.370991 0.3706602
+# Warning message:
+#   In ecpc(Y = outcome[indices_train], X = features[indices_train,  :
+#                                                      Cross-validated global penalty lambda was >10^12 and set to 100
 ridge_outg35m6 = grouping_prediction(outcome, features, mygrouping35,threshold_months)
 saveRDS(object = ridge_outg35m6,file = 'ridge_outg35m6.RDS')
-# threshold months is set to 6
-# mean of aucs
-# 0.7191667
-# sd of aucs
-# 0.1267138
-# 2.5 and 97.5 quantiles of aucs
-# 0.5
-# 0.9350694
-# estimated group weights
-# 0.05218083 0.3285088 0.2542917 0.09740936 0.03714769 0.0411128 0.01272688 0.02982337 0.0532762 0.01981732 0.006073492 0.06763155
+# [1] "REPEAT 9"
+# [1] "Estimate global tau^2 (equiv. global ridge penalty lambda)"
+# Error in qr.coef(qr(a, LAPACK = TRUE), b) : 
+#   error code 39 from Lapack routine 'dtrtrs'
+# Error: Matrix inversion failed. Please increase lambda1 and/or lambda2 
 
-# start here for 12 months
 
 stop('rerun script to continue with new outcome with new threshold month and therefore outcome')
 
@@ -422,39 +423,46 @@ ridge_outg3m12 = grouping_prediction(outcome, features, mygrouping3,threshold_mo
 saveRDS(object = ridge_outg3m12,file = 'ridge_outg3m12.RDS')
 # threshold months is set to 12
 # mean of aucs
-# 0.6797143
+# 0.6714286
 # sd of aucs
-# 0.1336724
+# 0.1540512
 # 2.5 and 97.5 quantiles of aucs
-# 0.435
-# 0.9442857
+# 0.4064286
+# 0.9364286
 # estimated group weights
-# 0.2902842 0.09920967 0.3603226 0.1861201 0.01430669 0.02906129 0.01074353 0.009951977
+# 0 0.7482927 0.0340254 0.1426701 0.002286172 0.001657105 0.04497709 0.02609149
 # ridge_outg4m12 = grouping_prediction(outcome, features, mygrouping3,threshold_months)
 ridge_outg5m12 = grouping_prediction(outcome, features, mygrouping5,threshold_months)
 saveRDS(object = ridge_outg5m12,file = 'ridge_outg5m12.RDS')
 # threshold months is set to 12
 # mean of aucs
-# 0.6611429
+# 0.6434286
 # sd of aucs
-# 0.1317881
+# 0.1609261
 # 2.5 and 97.5 quantiles of aucs
-# 0.3985714
-# 0.9189286
+# 0.2921429
+# 0.9235714
 # estimated group weights
-# 0.5974508 0.06223167 0.07146021 0.2688573
+# 0.3426152 0.004473166 0.2876232 0.3652884
+# Warning messages:
+#   1: In ecpc(Y = outcome[indices_train], X = features[indices_train,  :
+#                                                         Cross-validated global penalty lambda was >10^12 and set to 100
+#   2: In ecpc(Y = outcome[indices_train], X = features[indices_train,  :
+#                                                         Cross-validated global penalty lambda was >10^12 and set to 100
+#   3: In ecpc(Y = outcome[indices_train], X = features[indices_train,  :
+#                                                         Cross-validated global penalty lambda was >10^12 and set to 100
 ridge_outg35m12 = grouping_prediction(outcome, features, mygrouping35,threshold_months)
 saveRDS(object = ridge_outg35m12,file = 'ridge_outg35m12.RDS')
 # threshold months is set to 12
 # mean of aucs
-# 0.7085714
+# 0.6297143
 # sd of aucs
-# 0.1038212
+# 0.1775355
 # 2.5 and 97.5 quantiles of aucs
-# 0.5271429
+# 0.2764286
 # 0.8857143
 # estimated group weights
-# 0.2612279 0.1082865 0.2612905 0.1948133 0.01285508 0.02500867 0.01066475 0.007552277 0.07145908 0.003580325 0.01202144 0.03124018
+# 8.332623e-05 0.6668872 0.02658449 0.1603943 0.008039079 0.001159193 0.03955409 0.03937858 0.0234668 0.0004502759 0.01358855 0.02041418
 
 
 ##### RANDOM FOREST ######
@@ -522,7 +530,7 @@ Forest <- rfsrc(outcome ~ .,data=DF,ntree=20000,var.used="all.trees",importance=
 roc_Forest = pROC::roc(outcome~Forest$predicted.oob, levels=c(0,1), direction="<")
 plot(roc_Forest)
 roc_Forest$auc #Out Of Bag performance
-# Area under the curve: 0.6748
+# Area under the curve: 0.6398
 # Forest$importance #feature importances
 rf_outm6 = list('Forest' = Forest, 'roc_Forest' = roc_Forest)
 saveRDS(object = rf_outm6,file = 'rf_outm6.RDS')
@@ -532,14 +540,14 @@ saveRDS(object = rf_outm6,file = 'rf_outm6.RDS')
 set.seed(0)
 rf_outg3m6 = reforest(outcome, features, Forest, group3_per_feature, threshold_months)
 # threshold months is set to 6
-# Area under curve:  0.7375541
+# Area under curve:  0.6505376
 
 # save outcome
 saveRDS(object = rf_outg3m6,file = 'rf_outg3m6.RDS')
 
 rf_outg5m6 = reforest(outcome, features, Forest, group5_per_feature, threshold_months)
 # threshold months is set to 6
-# Area under curve:  0.7072511
+# Area under curve:  0.6408602
 
 # save outcome
 saveRDS(object = rf_outg5m6,file = 'rf_outg5m6.RDS')
@@ -547,21 +555,6 @@ saveRDS(object = rf_outg5m6,file = 'rf_outg5m6.RDS')
 
 
 stop('rerun script to continue with new outcome with new threshold month and therefore outcome')
-
-
-set.seed(0)
-DF <- data.frame(outcome, features)
-Forest <- rfsrc(outcome ~ .,data=DF,ntree=20000,var.used="all.trees",importance="TRUE",nodesize=2,seed=1)
-
-roc_Forest = pROC::roc(outcome~Forest$predicted.oob, levels=c(0,1), direction="<")
-plot(roc_Forest)
-roc_Forest$auc #Out Of Bag performance
-# Area under the curve: 0.6454
-# Forest$importance #feature importances
-rf_outm12 = list('Forest' = Forest, 'roc_Forest' = roc_Forest)
-saveRDS(object = rf_outm12,file = 'rf_outm12.RDS')
-
-
 
 ##### RANDOM FOREST 12 months #####
 # threshold months is set to 12
@@ -573,7 +566,7 @@ Forest <- rfsrc(outcome ~ .,data=DF,ntree=20000,var.used="all.trees",importance=
 roc_Forest = pROC::roc(outcome~Forest$predicted.oob, levels=c(0,1), direction="<")
 plot(roc_Forest)
 roc_Forest$auc #Out Of Bag performance
-# Area under the curve: 0.6454
+# Area under the curve: 0.6917
 # Forest$importance #feature importances
 rf_outm12 = list('Forest' = Forest, 'roc_Forest' = roc_Forest)
 saveRDS(object = rf_outm12,file = 'rf_outm12.RDS')
@@ -583,14 +576,14 @@ saveRDS(object = rf_outm12,file = 'rf_outm12.RDS')
 set.seed(0)
 rf_outg3m12 = reforest(outcome, features, Forest, group3_per_feature, threshold_months)
 # threshold months is set to 12
-# Area under curve:  0.6857143
+# Area under curve:  0.6917211
 
 # save outcome
 saveRDS(object = rf_outg3m12,file = 'rf_outg3m12.RDS')
 
 rf_outg5m12 = reforest(outcome, features, Forest, group5_per_feature, threshold_months)
 # threshold months is set to 12
-# Area under curve:  0.6890756
+# Area under curve:  0.6753813
 
 # save outcome
 saveRDS(object = rf_outg5m12,file = 'rf_outg5m12.RDS')
