@@ -11,6 +11,7 @@ if (exists('snakemake')) { # if the script is used by snakemake
     colors_absolut = snakemake@params[["colors"]]
     path_script = snakemake@params[["pathscript"]]
     path_figure = snakemake@params[["fig_prefix"]]
+    ref_ctype = strsplit(snakemake@params[["ref_ctype"]], split=',')[[1]]
 }else {
     args = commandArgs(trailingOnly=TRUE)
     infile = args[1]
@@ -18,8 +19,9 @@ if (exists('snakemake')) { # if the script is used by snakemake
     r_vec = as.numeric(strsplit(args[3], split=',')[[1]])
     pheno_vector_absolut = strsplit(args[4], split=',')[[1]]
     color_absolut = strsplit(args[5], split=',')[[1]]
-    path_script = args[6]
-    path_figure = args[7]
+    ref_ctype = strsplit(args[6], split=',')[[1]]
+    path_script = args[7]
+    path_figure = args[8]
 }
 
 
@@ -45,7 +47,7 @@ set.seed(0)
 output = do_analyse(seg_path = infile, PhenoOrder=pheno_vector_absolut, ColsOrder=colors_absolut, 
 			XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype',
 			sample_name = samplename, plotter = c(TRUE, TRUE,TRUE), fig.prefix = path_figure,
-			r_vec = r_vec, spatstat_statistics = 'ALL')
+			r_vec = r_vec, spatstat_statistics = 'ALL', reference=ref_ctype)
 
 print(output)
 print(length(output))
