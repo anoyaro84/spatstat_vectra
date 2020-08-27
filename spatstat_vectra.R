@@ -18,7 +18,8 @@ library(latex2exp)
 do_analyse <- function(seg_path, PhenoOrder = NULL, ColsOrder = NULL,
                        XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype',
                        sample_name = 'Input sample', plotter = c(FALSE,FALSE,FALSE), fig.prefix = '.',
-                       r_vec = NULL, spatstat_statistics = 'ALL', ...) {
+                       r_vec = NULL, spatstat_statistics = 'ALL', 
+                       reference = 'Tumors', ...) {
   
   
   # Create table with the right spatial dimensions such as described by the component file
@@ -106,7 +107,7 @@ do_analyse <- function(seg_path, PhenoOrder = NULL, ColsOrder = NULL,
   pairwise_distance = distance_matrix(csd)
   
   # call getMAD function
-  output = getMAD(Intable_with_distance, pairwise_distance, pheno_vector, missing_in_data)
+  output = getMAD(Intable_with_distance, pairwise_distance, pheno_vector, missing_in_data, reference=reference)
   MED_min = output[[1]]
   MED = output[[2]]
   MAD_min = output[[3]]
@@ -336,7 +337,9 @@ do_analyse <- function(seg_path, PhenoOrder = NULL, ColsOrder = NULL,
 
 
 #### function normal statistic: Median and Median Absolute Deviation ####
-getMAD <- function(data_with_distance, pairwise_distances, pheno_vector, missing_in_data){
+getMAD <- function(data_with_distance, pairwise_distances, pheno_vector, missing_in_data,
+                   reference = "Tumors" # used for relative distance calculation
+                   ){
   
   phenos = c(pheno_vector, missing_in_data)
   # phenos = pheno_vector
@@ -367,46 +370,81 @@ getMAD <- function(data_with_distance, pairwise_distances, pheno_vector, missing
       
       MED[paste(from), paste(to)] = median(pairwise_to_from[pairwise_to_from > 0]) # median(pairwise_to_from[pairwise_to_from > 0]
       MAD[paste(from), paste(to)] = mad(pairwise_to_from[pairwise_to_from > 0])
-      #if(from == 'Tcells' && to == 'Tcells'){
-      #  view(pairwise_to_from)
-      #  View(list(median(pairwise_to_from),mad(pairwise_to_from)))
-      #  View(list(median(pairwise_to_from[pairwise_to_from > 0]),mad(pairwise_to_from[pairwise_to_from > 0])))
-      #  browser()
-      #}
     }
   }
   
-  ratio_distances = matrix(NA, nrow = 1, ncol = 5, 
-                           dimnames = list(paste('Cell ID'), c('Distance Tumor to Tcell','Cell ID Tcell','Distance Tcell to Macrophage', 'Cell ID Macrophage', 'distance_ratio_Tumor_Tcell_Macrophage')))
-  
-  if (!any('Tumors' %in% missing_in_data)){
-    tumors = data_with_distance %>% filter(`Phenotype` == 'Tumors')
-    
-    ratio_distances = matrix(NA, nrow = length(tumors$`Cell ID`), ncol = 5, 
-                             dimnames = list(paste('Cell ID', tumors$`Cell ID`),c('Distance Tumor to Tcell','Cell ID Tcell','Distance Tcell to Macrophage', 'Cell ID Macrophage', 'distance_ratio_Tumor_Tcell_Macrophage')))
-    
-    if ((!any(c('Tcells', 'Macrophage') %in% missing_in_data))){
-      tcells = data_with_distance %>% filter(`Phenotype` == 'Tcells')
-      macrophages = data_with_distance %>% filter(`Phenotype` == 'Macrophage')
-      
-      for (tumor_ID in tumors$`Cell ID`){
-        tcell_ID = as.integer(tumors[which(tumors$`Cell ID` == tumor_ID), 'Cell ID Tcells'])
-        ratio_distances[paste('Cell ID', tumor_ID),'Cell ID Tcell'] = tcell_ID
-        distance_tumor_to_tcell = as.numeric(tumors[which(tumors$`Cell ID` == tumor_ID), 'Distance to Tcells'])
-        ratio_distances[paste('Cell ID', tumor_ID),'Distance Tumor to Tcell'] = distance_tumor_to_tcell
-        
-        macrophage_ID = as.integer(tcells[which(tcells$`Cell ID` == tcell_ID), 'Cell ID Macrophage'])
-        ratio_distances[paste('Cell ID', tumor_ID),'Cell ID Macrophage'] = macrophage_ID
-        distance_tcell_to_macrophage = as.numeric(tcells[which(tcells$`Cell ID` == tcell_ID), 'Distance to Macrophage'])
-        ratio_distances[paste('Cell ID', tumor_ID),'Distance Tcell to Macrophage'] = distance_tcell_to_macrophage
-        
-        ratio_distances[paste('Cell ID', tumor_ID),'distance_ratio_Tumor_Tcell_Macrophage'] = distance_tumor_to_tcell/distance_tcell_to_macrophage # spatial Score SS
+
+  ratio_distances = NULL 
+  combination = combn(setdiff(pheno_vector, reference), 2)
+  combination = cbind(combination,   rbind(combination[2,], combination[1,]))
+  if (!any(reference %in% missing_in_data)) {
+      refs = data_with_distance %>% filter(`Phenotype` %in% reference)
+
+      for (i in 1:ncol(combination)) {
+          if ((!any(combination[,i] %in% missing_in_data))) {
+              Ctype1 = combination[1,i]
+              Ctype2 = combination[2,i]
+              dist_ctype1 = data_with_distance %>% filter(`Phenotype` == Ctype1)
+
+              print(refs$`Cell ID`)
+              mat = matrix(NA, nrow=length(refs$`Cell ID`), ncol=5,
+                           dimnames = list(paste0('Cell ID ', refs$`Cell ID`),
+                                           c(paste0('Cell ID ',Ctype1), paste0('Distance to ', Ctype1),
+                                             paste0('Cell ID ',Ctype2), paste0('Distance to ', Ctype2),
+                                             paste0('Relative_distance_', Ctype1, '_', Ctype2)
+                                           )
+                                )
+                           )
+              for (refID in refs$`Cell ID`) {
+                  ctype1_ID = as.integer(refs[which(refs$`Cell ID` == refID), paste0('Cell ID ', Ctype1)])
+                  mindist_ctype1 = as.numeric(refs[which(refs$`Cell ID` == refID), paste0('Distance to ', Ctype1)])                  
+                  ctype2_ID = as.integer(dist_ctype1[which(dist_ctype1$`Cell ID` == ctype1_ID), 
+                                         paste0('Cell ID ', Ctype2)])
+
+                  mindist_ctype1_ctype2 = as.numeric(dist_ctype1[which(dist_ctype1$`Cell ID` == ctype1_ID), 
+                                                  paste0('Distance to ', Ctype2)])
+                  mat[paste0('Cell ID ', refID), ] =
+                      c(ctype1_ID, mindist_ctype1, ctype2_ID, mindist_ctype1_ctype2,
+                        mindist_ctype1/mindist_ctype1_ctype2
+                        )
+              }
+              ratio_distances = cbind(ratio_distances, mat)
+          }
       }
-    }
   }
+
+
+  #ratio_distances = matrix(NA, nrow = 1, ncol = 5, 
+  #                         dimnames = list(paste('Cell ID'), c('Distance Tumor to Tcell','Cell ID Tcell','Distance Tcell to Macrophage', 'Cell ID Macrophage', 'distance_ratio_Tumor_Tcell_Macrophage')))
+  
+  #if (!any('Tumors' %in% missing_in_data)){
+  #  tumors = data_with_distance %>% filter(`Phenotype` == 'Tumors')
+    
+  #  ratio_distances = matrix(NA, nrow = length(tumors$`Cell ID`), ncol = 5, 
+  #                           dimnames = list(paste('Cell ID', tumors$`Cell ID`),c('Distance Tumor to Tcell','Cell ID Tcell','Distance Tcell to Macrophage', 'Cell ID Macrophage', 'distance_ratio_Tumor_Tcell_Macrophage')))
+    
+  #  if ((!any(c('Tcells', 'Macrophage') %in% missing_in_data))){
+  #    tcells = data_with_distance %>% filter(`Phenotype` == 'Tcells')
+  #    macrophages = data_with_distance %>% filter(`Phenotype` == 'Macrophage')
+  #    
+  #    for (tumor_ID in tumors$`Cell ID`){
+  #      tcell_ID = as.integer(tumors[which(tumors$`Cell ID` == tumor_ID), 'Cell ID Tcells'])
+  #      ratio_distances[paste('Cell ID', tumor_ID),'Cell ID Tcell'] = tcell_ID
+  #      distance_tumor_to_tcell = as.numeric(tumors[which(tumors$`Cell ID` == tumor_ID), 'Distance to Tcells'])
+  #      ratio_distances[paste('Cell ID', tumor_ID),'Distance Tumor to Tcell'] = distance_tumor_to_tcell
+        
+       # macrophage_ID = as.integer(tcells[which(tcells$`Cell ID` == tcell_ID), 'Cell ID Macrophage'])
+  #      ratio_distances[paste('Cell ID', tumor_ID),'Cell ID Macrophage'] = macrophage_ID
+  #      distance_tcell_to_macrophage = as.numeric(tcells[which(tcells$`Cell ID` == tcell_ID), 'Distance to Macrophage'])
+  #      ratio_distances[paste('Cell ID', tumor_ID),'Distance Tcell to Macrophage'] = distance_tcell_to_macrophage
+  #      
+  #      ratio_distances[paste('Cell ID', tumor_ID),'distance_ratio_Tumor_Tcell_Macrophage'] = distance_tumor_to_tcell/distance_tcell_to_macrophage # spatial Score SS
+  #    }
+  #  }
+  #}
   
   
-  return(list(MED_min, MED, MAD_min, MAD,ratio_distances))
+  return(list(MED_min, MED, MAD_min, MAD, ratio_distances))
 }
 
 # #### function normal statistic: Counts and density ####
@@ -759,14 +797,20 @@ feature_extract <- function(outputs){
       }
     }
   }
-  
+
+  # Identify all possible pairs of cell types (for pairwise relative distances)
+  CellPairs = c()
+  for (out in outputs) {
+      CellPairs = union(CellPairs, grep('Relative_distance_', colnames(out$ratio_distances), value=T))
+  }
+
   # create a matrix for pairwise distances 
-  mat_ratio_distances_median = matrix(NA, nrow = 1, ncol = length(outputs),
-                       dimnames = list('distance_ratio_median_Tumor_Tcell_Macrophage', names(outputs)))
+  mat_ratio_distances_median = matrix(NA, nrow = length(CellPairs), ncol = length(outputs),
+                       dimnames = list(CellPairs, names(outputs)))
   
   # create a matrix for MAD symmetric for the features
-  mat_ratio_distances_mad = matrix(NA, nrow = 1, ncol = length(outputs),
-                                   dimnames = list('distance_ratio_mad_Tumor_Tcell_Macrophage', names(outputs)))
+  mat_ratio_distances_mad = matrix(NA, nrow = length(CellPairs), ncol = length(outputs),
+                                   dimnames = list(CellPairs, names(outputs)))
   
   
   # fill matrices
@@ -774,10 +818,13 @@ feature_extract <- function(outputs){
     out = outputs[[i]]
     name = names(outputs)[i]
     data_mat_ratio_distances = out$ratio_distances
-    mat_ratio_distances = data_mat_ratio_distances[,'distance_ratio_Tumor_Tcell_Macrophage']
-    
-    mat_ratio_distances_median['distance_ratio_median_Tumor_Tcell_Macrophage', name] = median(mat_ratio_distances)
-    mat_ratio_distances_mad['distance_ratio_mad_Tumor_Tcell_Macrophage', name] = mad(mat_ratio_distances)
+    for (feat in CellPairs) {
+        if (feat %in% colnames(data_mat_ratio_distances)){
+            mat_ratio_distances = data_mat_ratio_distances[,feat]
+            mat_ratio_distances_median[feat, name] = median(mat_ratio_distances)
+            mat_ratio_distances_mad[feat, name] = mad(mat_ratio_distances)
+        }
+    }
   }
   
   
