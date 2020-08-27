@@ -19,10 +19,17 @@ library(randomForest)
 library(expm)
 library(Rsolnp)
 library(dplyr)
+library(purrr)
 library(ggplot2)
 library(ggraph)
 library(igraph)
 library(RColorBrewer)
+
+
+remotes::install_github("DennisBeest/CoRF")
+library(CoRF)
+library(randomForestSRC)
+library(scam)
 
 #source('spatstat_vectra.R')
 
@@ -75,17 +82,17 @@ statisticPerPatient <- function(mat, statistic = 'mean', na.handler = 'complete_
 
 
 
-## DATA PREPROCESSING
+##### DATA PREPROCESSING ####
 
-# step 1 read feature matrix and clinical data
-clinical_raw <- read_excel("C:/Users/t.brug/Documents/Bosch, Erik/2019_06_20_Full spreadsheet HO105_cleaned.xls")
-features_raw = readRDS(path.expand('C:/Users/t.brug/Documents/Bosch, Erik/Extracted_Features_4thAug.RDS'))
+##### read feature matrix and clinical data
+# clinical_raw <- read_excel("C:/Users/t.brug/Documents/Bosch, Erik/2019_06_20_Full spreadsheet HO105_cleaned.xls")
+# features_raw = readRDS(path.expand('C:/Users/t.brug/Documents/Bosch, Erik/Extracted_Features_4thAug.RDS'))
 
 clinical_raw <- read_excel("~/Studie/Thesis - Local/2019_06_20_Full spreadsheet HO105_cleaned.xls")
 features_raw = readRDS(path.expand('~/Studie/Thesis - Local/Extracted_Features_4thAug.RDS'))
 
 
-# paste 'Centered_' in centered column name statistics for better regex finding in making groups
+##### paste 'Centered_' in centered column name statistics for better regex finding in making groups
 index_pcf = which(str_detect(colnames(features_raw),'(?<![Normalized_])pcf_radius'))
 colnames(features_raw)[index_pcf] = paste0('Centered_', colnames(features_raw)[index_pcf])
 index_other_stats = which(str_detect(colnames(features_raw),'(?<![Normalized_])[A-Z]_radius|(?<![Normalized_])[A-Z]dot_radius'))
@@ -93,7 +100,7 @@ colnames(features_raw)[index_other_stats] = paste0('Centered_', colnames(feature
 
 features_raw = features_raw[,c(colnames(features_raw)[1:86],sort(colnames(features_raw)[87:length(colnames(features_raw))]))]
 
-# make correct patient names and filter without Jstatistic
+##### make correct patient names and filter without Jstatistic
 rownames(features_raw) <- str_replace_all(rownames(features_raw), pattern = '\\_[0-9]\\_', replacement = '\\_')
 cols_without_J = str_subset(colnames(features_raw),'J_radius', negate = TRUE)
 cols_without_Jdot = str_subset(colnames(features_raw),'Jdot_radius', negate = TRUE)
@@ -102,12 +109,13 @@ cols_without_J_Total = intersect(cols_without_J, cols_without_Jdot)
 features_raw = features_raw[,cols_without_J_Total]
 
 
-# step 2 compute raw outcome on raw clinical data
+##### convert raw outcome on raw clinical data to binary outcome by thresholding
 outcome_raw = rep(0,dim(clinical_raw)[1])
 names(outcome_raw) = clinical_raw[['case_id']]
 
 # set threshold months to 12, 9 or 6 months
-threshold_months = 9
+threshold_months = 6
+
 
 for (i in seq_along(outcome_raw)){
   if (clinical_raw[i, 'Event free survival [m]'] > threshold_months){
@@ -119,9 +127,13 @@ for (i in seq_along(outcome_raw)){
   }
 }
 
+##### sync data with the patient MSI selected by biologist
 image_check_path <- path.expand('~/Studie/Thesis - Local/spatstat_vectra/HO105 tumor_border annotation.xlsx')
 
 HO105_image_check <- read_excel(image_check_path)
+
+
+### Tumors ###
 # get the MSI's through regex finding: open bracket->MSI numbers->comma->MSI numbers-> closed bracket
 tumor_images_unfil = str_extract_all(HO105_image_check$`Tumor images`,'\\[[0-9]+,[0-9]+\\]')
 
@@ -129,12 +141,513 @@ tumor_images_unfil = str_extract_all(HO105_image_check$`Tumor images`,'\\[[0-9]+
 tumor_images = tumor_images_unfil[!sapply(tumor_images_unfil,is_empty)]
 HOnrs = HO105_image_check$`HO105 nr`[!sapply(tumor_images_unfil,is_empty)]
 names(tumor_images) = HOnrs
-# create string with sample names of tumor images that are checked by marit
+# create string with sample names of tumor images that are checked by biologist
 tumor_images_checked = unlist(lapply(seq_along(HOnrs),function(x) paste0(names(tumor_images)[x],'_',unlist(tumor_images[HOnrs][x]))))
 
 
-warning('these are missing in features matrix ', setdiff(tumor_images_checked,rownames(features_raw)))
+warning('these MSI are missing in features matrix compared to selection by biologist ', setdiff(tumor_images_checked,rownames(features_raw)))
 features_tumor_checked = features_raw[tumor_images_checked,]
+
+##### averaging features for every  patient in the feature matrix with specific NA handling
+features_tumor_checked = statisticPerPatient(features_tumor_checked, statistic = 'mean', na.handler = 'complete_cases')
+colnames(features_tumor_checked) <- paste0('Tumors_im_',colnames(features_tumor_checked))
+
+
+### Borders ###
+# replace string 'NA' with NA in border column
+HO105_image_check$`Border images`[HO105_image_check$`Border images` == 'NA'] = rep(NA)
+# get the MSI's through regex finding: open bracket->MSI numbers->comma->MSI numbers-> closed bracket
+border_images_unfil = str_extract_all(HO105_image_check$`Border images`,'\\[[0-9]+,[0-9]+\\]')
+# create filtered border_images and HOnrs_border
+border_images = border_images_unfil[!is.na(border_images_unfil)]
+HOnrs_border = HO105_image_check$`HO105 nr`[!is.na(border_images_unfil)]
+names(border_images) = HOnrs_border
+# create string with sample names of tumor images that are checked by marit
+border_images_checked = unlist(lapply(seq_along(HOnrs_border),function(x) paste0(HOnrs_border[x],'_',unlist(border_images[HOnrs_border][x]))))
+
+warning('these border images are missing in features matrix ', setdiff(border_images_checked,rownames(features_raw)), ' removing from borders to evaluate')
+if (!is_empty(setdiff(border_images_checked,rownames(features_raw)))){
+  border_images_checked = intersect(border_images_checked,rownames(features_raw))
+}
+
+features_border_checked = features_raw[border_images_checked,]
+
+# take mean per patient for Borders and change colnames accordingly
+features_border_checked = statisticPerPatient(features_border_checked, statistic = 'mean', na.handler = 'complete_cases')
+colnames(features_border_checked) <- paste0('Borders_im_',colnames(features_border_checked))
+
+
+
+# merge features Tumors with features Borders
+features_checked_df = merge(features_tumor_checked, features_border_checked, by = 'row.names', all = TRUE)
+features_checked = as.matrix(features_checked_df[-1])
+rownames(features_checked) = features_checked_df[,1]
+# https://stackoverflow.com/questions/5738773/r-how-to-merge-two-matrix-according-to-their-column-and-row-names
+
+
+
+##### find complete patient cases in outcome and features
+patientID_outcome = names(outcome_raw[complete.cases(outcome_raw)])
+patientID_features = rownames(features_checked[complete.cases(features_checked),])
+patientID_complete = intersect(patientID_outcome, patientID_features)
+
+
+##### select complete patient cases outcome and features in correct syntax for prediction
+outcome_complete = outcome_raw[patientID_complete]
+features_complete = features_checked[patientID_complete,]
+patientID_complete = patientID_complete
+
+
+
+##### FEATURE PREPROCESSING #####
+
+#delete constant features
+delete_constant_features <- function(myfeatures) {
+  constant_features = c()
+  for (j in 1:ncol(myfeatures)) {
+    if (max(myfeatures[,j]) - min(myfeatures[,j]) == 0) {
+      constant_features = c(constant_features,j)
+    }
+  }
+  if (is.null(constant_features)) {
+    return(myfeatures)
+  } else {
+    return(myfeatures[,-constant_features])
+  }
+}
+
+
+#log transform of skewed features
+deskew <- function(myfeatures, threshold) {
+  myfeatures_deskewed = myfeatures
+  for (j in 1:ncol(myfeatures)) {
+    if (skewness(myfeatures[,j])>threshold & sum(myfeatures[,j]<=0)==0) { #skewed and positive
+      for (i in 1:nrow(myfeatures)) {
+        myfeatures_deskewed[i,j] = log(myfeatures[i,j])
+      }
+    }
+  }
+  return(myfeatures_deskewed)
+}
+
+
+#final features for prediction!
+features = scale(deskew(delete_constant_features(features_complete), 1))
+outcome = outcome_complete
+
+
+###### RIDGE LOGISTIC REGRESSION ######
+
+set.seed(0)
+myalpha = 0 #alpha=0 ridge, alpha=1 LASSO
+penaltyfactor = rep(1,ncol(features)) #1 is penalized, 0 is unpenalized
+train_percentage = 0.8 
+nrepeats = 250
+
+aucs = numeric(nrepeats) 
+indices0 = (1:length(outcome))[outcome==0]
+indices1 = (1:length(outcome))[outcome==1]
+for (k in 1:nrepeats) {
+  ind0 = sample(indices0)
+  ind1 = sample(indices1)
+  indices_train = c(ind0[1:round(length(ind0)*train_percentage)],
+                    ind1[1:round(length(ind1)*train_percentage)])
+  indices_test = c(ind0[(round(length(ind0)*train_percentage)+1):length(ind0)],
+                   ind1[(round(length(ind1)*train_percentage)+1):length(ind1)])
+  best_lambda = cv.glmnet(features[indices_train,], outcome[indices_train], alpha=myalpha, penalty.factor = penaltyfactor, nfolds=5, family="binomial")$lambda.min
+  model_train = glmnet(features[indices_train,], outcome[indices_train], alpha=myalpha, penalty.factor = penaltyfactor, family="binomial", lambda=best_lambda)
+  prob_test = as.vector(predict(model_train, type="response", newx=features[indices_test,]))
+  myroc = pROC::roc(outcome[indices_test]~prob_test,levels=c(0,1), direction="<", quiet=TRUE)
+  aucs[k] = myroc$auc
+  
+}
+{
+  cat('threshold months is set to',threshold_months,fill = T)
+  cat('mean of aucs',fill = T)
+  cat(mean(aucs),fill = T)
+  cat('sd of aucs',fill = T)
+  cat(sd(aucs),fill = T)
+  cat('2.5 and 97.5 quantiles of aucs',fill = T)
+  cat(quantile(aucs,0.025),fill = T)
+  cat(quantile(aucs,0.975),fill = T)#cross validated AUC
+}
+# threshold months is set to 6
+# mean of aucs
+# 0.5056667
+# sd of aucs
+# 0.1716593
+# 2.5 and 97.5 quantiles of aucs
+# 0.1944444
+# 0.8548611
+
+
+### 12 months
+# [1] 0.6938286
+# [1] 0.1034558
+# 2.5% 
+# 0.5 
+# 97.5% 
+# 0.8967857 
+
+
+###### RIDGE LOGISTIC REGRESSION WITH GROUP STRUCTURE (ECPC) ######
+
+
+# function for prediction depending on mygrouping
+grouping_prediction <- function(outcome, features, mygrouping,threshold_months = threshold_months) {
+  set.seed(0)
+  ndepth = vec_depth(mygrouping)
+  if (ndepth > 2){
+    # multiple groupings
+    ngroupings = length(mygrouping)
+    ngroups = 0
+    for (groupingindex in 1:ngroupings){
+      ngroups = ngroups + length(mygrouping[[groupingindex]])
+    }
+  } else{
+    # one grouping
+    ngroupings = 1
+    ngroups = length(mygrouping)
+    mygrouping = list(mygrouping)
+  }
+  
+  train_percentage = 0.8 
+  nrepeats = 50 
+  
+  aucs = numeric(nrepeats)
+  gammas = matrix(nrow=nrepeats, ncol=ngroups) #group weights
+  indices0 = (1:length(outcome))[outcome==0]
+  indices1 = (1:length(outcome))[outcome==1]
+  
+  for (k in 1:nrepeats) { 
+    print(paste("REPEAT", k))
+    ind0 = sample(indices0)
+    ind1 = sample(indices1)
+    indices_train = c(ind0[1:round(length(ind0)*train_percentage)],
+                      ind1[1:round(length(ind1)*train_percentage)])
+    indices_test = c(ind0[(round(length(ind0)*train_percentage)+1):length(ind0)],
+                     ind1[(round(length(ind1)*train_percentage)+1):length(ind1)])
+    fit = ecpc(Y=outcome[indices_train], X=features[indices_train,], Y2=outcome[indices_test], X2=features[indices_test,], 
+               groupings=mygrouping, model="logistic", postselection=FALSE)
+    myroc = pROC::roc(outcome[indices_test]~fit$Ypred,levels=c(0,1), direction="<", quiet=TRUE)
+    aucs[k] = myroc$auc
+    gammas[k,] = fit$gamma
+  }
+  cat('threshold months is set to',threshold_months,fill = T)
+  cat('mean of aucs',fill = T)
+  cat(mean(aucs),fill = T)
+  cat('sd of aucs',fill = T)
+  cat(sd(aucs),fill = T)
+  cat('2.5 and 97.5 quantiles of aucs',fill = T)
+  cat(quantile(aucs,0.025),fill = T)
+  cat(quantile(aucs,0.975),fill = T) #cross validated AUC
+  cat('estimated group weights',fill = T)
+  cat(colMeans(gammas)/sum(colMeans(gammas)),fill = T) #estimated group weights
+  
+  return(list('aucs' = aucs,'gammas' = gammas,'fit' = fit, 'myroc' = myroc))
+}
+
+##### groups #####
+l = 1366
+GRsplitTumor =1:1366
+GRsplitBorder=1367:2732
+
+## 0
+GRallfeatgroup = 1:(1366+l)
+## 1
+GRsimple_spatial <- c(1:24,c(1:24)+l)
+GRcomplex_spatial <- c(25:1366,c(25:1366)+l)
+# 2
+GRcounts = c(1:32,c(1:32)+l) # L32 Regex: which(str_detect(colnames(features),'counts_[a-z]+|density|X2stat')) 
+GRmed_mad_ss = c(33:86,c(33:86)+l) # L54 Regex: which(str_detect(colnames(features),'MED|MAD|distance_ratio'))
+GRcentered = c(87:726,c(87:726)+l) # L640 Regex: which(str_detect(colnames(features), 'Centered_'))
+GRnormalized = c(727:1366,c(727:1366)+l) # L640 Regex: which(str_detect(colnames(features), 'Normalized_'))
+## 3
+#GRcounts
+GRmed_ss = c(33:58,85,86,c(33:58,85,86)+l) # L28 Regex: which(str_detect(colnames(features),'MED|distance_ratio'))
+GRmad = c(59:84,c(59:84)+l) # L28 Regex: which(str_detect(colnames(features),'MAD'))
+grFstat = c(87:118,727:758,c(87:118,727:758)+l) # L64 which(str_detect(colnames(features),'F_radius'))
+grGstat = c(119:278,759:918,c(119:278,759:918)+l) # L320 which(str_detect(colnames(features),'G_radius|Gdot_radius'))
+grKstat = c(279:438, 919:1078,c(279:438, 919:1078)+l)  # L320 which(str_detect(colnames(features),'K_radius|Kdot_radius'))
+grLstat = c(439:598, 1079:1238,c(439:598, 1079:1238)+l) # L320 which(str_detect(colnames(features),'L_radius|Ldot_radius'))
+GRpcfstat = c(599:726, 1239:1366,c(599:726, 1239:1366)+l) # L256 which(str_detect(colnames(features),'pcf_radius'))
+## 4
+#GRcounts 
+#GRmed_ss
+#GRmad
+grFstat_close = which(str_detect(colnames(features),'F_radius [0-9]_')) # L24
+grFstat_far = which(str_detect(colnames(features),'F_radius [0-9][0-9]_')) # L40 
+grGstat_close = which(str_detect(colnames(features),'G_radius [0-9]_|Gdot_radius [0-9]_')) # L120 
+grGstat_far = which(str_detect(colnames(features),'G_radius [0-9][0-9]_|Gdot_radius [0-9][0-9]_')) # L200 
+grKstat_close = which(str_detect(colnames(features),'K_radius [0-9]_|Kdot_radius [0-9]_')) # L120 
+grKstat_far = which(str_detect(colnames(features),'K_radius [0-9][0-9]_|Kdot_radius [0-9][0-9]_')) # L200 
+grLstat_close = which(str_detect(colnames(features),'L_radius [0-9]_|Ldot_radius [0-9]_')) # L120 
+grLstat_far = which(str_detect(colnames(features),'L_radius [0-9][0-9]_|Ldot_radius [0-9][0-9]_')) # L200 
+GRpcfstat_close = which(str_detect(colnames(features),'pcf_radius [0-9]_')) # L96 
+GRpcfstat_far = which(str_detect(colnames(features),'pcf_radius [0-9][0-9]_')) # L160
+# 5
+grMacrophage = which(str_detect(colnames(features),'Macrophage|distance_ratio')) #L547
+grTcells = which(str_detect(colnames(features),'Tcells|distance_ratio')) #L547
+grTumors = which(str_detect(colnames(features),'Tumor|distance_ratio')) #L547
+grOthers = which(str_detect(colnames(features),'Others')) #L545
+
+##### mygroupings #####
+mygrouping0 = list(GRallfeatgroup)
+mygrouping1 = list(GRsimple_spatial,GRcomplex_spatial)
+mygrouping2 = list(GRcounts,GRmed_mad_ss,GRcentered,GRnormalized) # L1366 sum(unlist(lapply(mygrouping,function(x) length(x))))
+mygrouping3 = list(GRcounts,GRmed_ss,GRmad,grFstat,grGstat,grKstat,grLstat,GRpcfstat) # L1366 sum(unlist(lapply(mygrouping,function(x) length(x))))
+mygrouping4 = list(GRcounts,GRmed_ss,GRmad,
+                   grFstat_close,grFstat_far,grGstat_close, grGstat_far,
+                   grKstat_close,grKstat_far,grLstat_close,grLstat_far,
+                   GRpcfstat_close,GRpcfstat_far) # L1366 sum(unlist(lapply(mygrouping,function(x) length(x))))
+mygrouping5 = list(grMacrophage,grTcells,grTumors,grOthers) # L1962 sum(unlist(lapply(mygrouping,function(x) length(x))))
+mygrouping35 = list(mygrouping3,mygrouping5)
+
+mygroupingSplitPhenotype = list(GRsplitTumor,GRsplitBorder)
+##### RIDGE LOGISTIC REGRESSION WITH GROUP STRUCTURE (ECPC) 6 months #####
+set.seed(0)
+
+ridge_outgSplitm6 = grouping_prediction(outcome, features, mygroupingSplitPhenotype,threshold_months)
+# saveRDS(object = ridge_outgSplitm6,file = 'ridge_outgSplitm6.RDS')
+# threshold months is set to 6
+# mean of aucs
+# 0.6188889
+# sd of aucs
+# 0.1507978
+# 2.5 and 97.5 quantiles of aucs
+# 0.3673611
+# 0.8826389
+# estimated group weights
+# 0.5786969 0.4213031
+
+ridge_outg0m6 = grouping_prediction(outcome, features, mygrouping0,threshold_months) # make sure to change threshold_months
+# saveRDS(object = ridge_outg0m6,file = 'ridge_outg0m6.RDS')
+# threshold months is set to 6
+# mean of aucs
+# 0.6811111
+# sd of aucs
+# 0.1602349
+# 2.5 and 97.5 quantiles of aucs
+# 0.4166667
+# 0.9659722
+# estimated group weights
+# 1
+ridge_outg1m6 = grouping_prediction(outcome, features, mygrouping1,threshold_months)
+# saveRDS(object = ridge_outg1m6,file = 'ridge_outg1m6.RDS')
+# threshold months is set to 6
+# mean of aucs
+# 0.6461111
+# sd of aucs
+# 0.1527453
+# 2.5 and 97.5 quantiles of aucs
+# 0.3395833
+# 0.9041667
+# estimated group weights
+# 0.8395769 0.1604231
+# ridge_outg2m6 = grouping_prediction(outcome, features, mygrouping2,threshold_months)
+ridge_outg3m6 = grouping_prediction(outcome, features, mygrouping3,threshold_months)
+# saveRDS(object = ridge_outg3m6,file = 'ridge_outg3m6.RDS')
+# ridge_outg4m6 = grouping_prediction(outcome, features, mygrouping4,threshold_months)
+ridge_outg5m6 = grouping_prediction(outcome, features, mygrouping5,threshold_months)
+# saveRDS(object = ridge_outg5m6,file = 'ridge_outg5m6.RDS')
+ridge_outg35m6 = grouping_prediction(outcome, features, mygrouping35,threshold_months)
+# saveRDS(object = ridge_outg35m6,file = 'ridge_outg35m6.RDS')
+
+
+
+
+stop('rerun script to continue with new outcome with new threshold month and therefore outcome')
+
+##### RIDGE LOGISTIC REGRESSION WITH GROUP STRUCTURE (ECPC) 12 months #####
+set.seed(0)
+# ridge_outg0m12 = grouping_prediction(outcome, features, mygrouping0,threshold_months)
+# ridge_outg1m12 = grouping_prediction(outcome, features, mygrouping1,threshold_months)
+# ridge_outg2m12 = grouping_prediction(outcome, features, mygrouping2,threshold_months)
+ridge_outg3m12 = grouping_prediction(outcome, features, mygrouping3,threshold_months)
+saveRDS(object = ridge_outg3m12,file = 'ridge_outg3m12.RDS')
+# threshold months is set to 12
+# mean of aucs
+# 0.6797143
+# sd of aucs
+# 0.1336724
+# 2.5 and 97.5 quantiles of aucs
+# 0.435
+# 0.9442857
+# estimated group weights
+# 0.2902842 0.09920967 0.3603226 0.1861201 0.01430669 0.02906129 0.01074353 0.009951977
+# ridge_outg4m12 = grouping_prediction(outcome, features, mygrouping3,threshold_months)
+ridge_outg5m12 = grouping_prediction(outcome, features, mygrouping5,threshold_months)
+saveRDS(object = ridge_outg5m12,file = 'ridge_outg5m12.RDS')
+# threshold months is set to 12
+# mean of aucs
+# 0.6611429
+# sd of aucs
+# 0.1317881
+# 2.5 and 97.5 quantiles of aucs
+# 0.3985714
+# 0.9189286
+# estimated group weights
+# 0.5974508 0.06223167 0.07146021 0.2688573
+ridge_outg35m12 = grouping_prediction(outcome, features, mygrouping35,threshold_months)
+saveRDS(object = ridge_outg35m12,file = 'ridge_outg35m12.RDS')
+# threshold months is set to 12
+# mean of aucs
+# 0.7085714
+# sd of aucs
+# 0.1038212
+# 2.5 and 97.5 quantiles of aucs
+# 0.5271429
+# 0.8857143
+# estimated group weights
+# 0.2612279 0.1082865 0.2612905 0.1948133 0.01285508 0.02500867 0.01066475 0.007552277 0.07145908 0.003580325 0.01202144 0.03124018
+
+
+##### RANDOM FOREST ######
+
+reforest <- function(outcome, features, Forest, group_per_feature, threshold_months){
+  set.seed(0)
+  DF <- data.frame(outcome, features)
+  
+  #number of times each feature is used in the ordinary random forest
+  VarUsed = Forest$var.used
+  
+  nfeatures = ncol(features)
+  preds2 = c()
+  for (j in 1:nfeatures) {
+    g = group_per_feature[j]
+    pred = mean(VarUsed[group_per_feature==g]) / sum(VarUsed)
+    preds2[j] = max(pred-1/nfeatures,0)
+  }
+  
+  #number of features randomly selected as candidates for splitting a node
+  Mtry <- ceiling(sqrt(sum(preds2!=0))) 
+  
+  #run CORF random forest
+  RefittedCoRF <- rfsrc(outcome ~ .,data=DF,ntree=20000,var.used="all.trees",importance="TRUE",
+                        xvar.wt=preds2,mtry=Mtry,nodesize=2,setseed=1)
+  
+  #Out Of Bag performance
+  roc_corf = pROC::roc(outcome~RefittedCoRF$predicted.oob, levels=c(0,1), direction="<")
+  #plot(roc_corf)
+  # feature importances
+  #RefittedCoRF$importance 
+  
+  cat('threshold months is set to',threshold_months,fill = T)
+  cat('Area under curve: ',roc_corf$auc,fill = T)
+  
+  return(list('RefittedCoRF' = RefittedCoRF, 'roc_corf' = roc_corf))
+}
+
+##### grouping 3 for Random Forest ####### 
+group3_per_feature = numeric(1366)
+group3_per_feature[GRcounts] = 1
+group3_per_feature[GRmed_ss] = 2
+group3_per_feature[GRmad] = 3
+group3_per_feature[grFstat] = 4
+group3_per_feature[grGstat] = 5
+group3_per_feature[grKstat] = 6
+group3_per_feature[grLstat] = 7
+group3_per_feature[GRpcfstat] = 8
+##### grouping 5 for Random Forest ####### 
+group5_per_feature = numeric(1366)
+group5_per_feature[grMacrophage] = 1
+group5_per_feature[grTcells] = 2
+group5_per_feature[grTumors] = 3
+group5_per_feature[grOthers] = 4
+
+
+
+##### RANDOM FOREST 6 months #####
+# threshold months is set to 6
+print(paste('threshold months is set to',threshold_months))
+set.seed(0)
+DF <- data.frame(outcome, features)
+Forest <- rfsrc(outcome ~ .,data=DF,ntree=20000,var.used="all.trees",importance="TRUE",nodesize=2,seed=1)
+
+roc_Forest = pROC::roc(outcome~Forest$predicted.oob, levels=c(0,1), direction="<")
+plot(roc_Forest)
+roc_Forest$auc #Out Of Bag performance
+# Area under the curve: 0.6748
+# Forest$importance #feature importances
+rf_outm6 = list('Forest' = Forest, 'roc_Forest' = roc_Forest)
+saveRDS(object = rf_outm6,file = 'rf_outm6.RDS')
+
+##### RANDOM FOREST WITH GROUP STRUCTURE (CORF) 6 months  ####### 
+
+set.seed(0)
+rf_outg3m6 = reforest(outcome, features, Forest, group3_per_feature, threshold_months)
+# threshold months is set to 6
+# Area under curve:  0.7375541
+
+# save outcome
+saveRDS(object = rf_outg3m6,file = 'rf_outg3m6.RDS')
+
+rf_outg5m6 = reforest(outcome, features, Forest, group5_per_feature, threshold_months)
+# threshold months is set to 6
+# Area under curve:  0.7072511
+
+# save outcome
+saveRDS(object = rf_outg5m6,file = 'rf_outg5m6.RDS')
+
+
+
+stop('rerun script to continue with new outcome with new threshold month and therefore outcome')
+
+
+set.seed(0)
+DF <- data.frame(outcome, features)
+Forest <- rfsrc(outcome ~ .,data=DF,ntree=20000,var.used="all.trees",importance="TRUE",nodesize=2,seed=1)
+
+roc_Forest = pROC::roc(outcome~Forest$predicted.oob, levels=c(0,1), direction="<")
+plot(roc_Forest)
+roc_Forest$auc #Out Of Bag performance
+# Area under the curve: 0.6454
+# Forest$importance #feature importances
+rf_outm12 = list('Forest' = Forest, 'roc_Forest' = roc_Forest)
+saveRDS(object = rf_outm12,file = 'rf_outm12.RDS')
+
+
+
+##### RANDOM FOREST 12 months #####
+# threshold months is set to 12
+print(paste('threshold months is set to',threshold_months))
+set.seed(0)
+DF <- data.frame(outcome, features)
+Forest <- rfsrc(outcome ~ .,data=DF,ntree=20000,var.used="all.trees",importance="TRUE",nodesize=2,seed=1)
+
+roc_Forest = pROC::roc(outcome~Forest$predicted.oob, levels=c(0,1), direction="<")
+plot(roc_Forest)
+roc_Forest$auc #Out Of Bag performance
+# Area under the curve: 0.6454
+# Forest$importance #feature importances
+rf_outm12 = list('Forest' = Forest, 'roc_Forest' = roc_Forest)
+saveRDS(object = rf_outm12,file = 'rf_outm12.RDS')
+
+##### RANDOM FOREST WITH GROUP STRUCTURE (CORF) 12 months  ####### 
+
+set.seed(0)
+rf_outg3m12 = reforest(outcome, features, Forest, group3_per_feature, threshold_months)
+# threshold months is set to 12
+# Area under curve:  0.6857143
+
+# save outcome
+saveRDS(object = rf_outg3m12,file = 'rf_outg3m12.RDS')
+
+rf_outg5m12 = reforest(outcome, features, Forest, group5_per_feature, threshold_months)
+# threshold months is set to 12
+# Area under curve:  0.6890756
+
+# save outcome
+saveRDS(object = rf_outg5m12,file = 'rf_outg5m12.RDS')
+
+
+
+
+
+
+
+
+
 
 # take mean per patient for Tumors and change colnames accordingly
 features_tumor_checked = statisticPerPatient(features_tumor_checked, statistic = 'mean', na.handler = 'complete_cases')
@@ -172,288 +685,4 @@ features_checked_df = merge(features_tumor_checked, features_border_checked, by 
 features_checked = as.matrix(features_checked_df[-1])
 rownames(features_checked) = features_checked_df[,1]
 # https://stackoverflow.com/questions/5738773/r-how-to-merge-two-matrix-according-to-their-column-and-row-names
-
-
-# step 4a filter on outcome NA's
-
-patientID_outcome = names(outcome_raw[complete.cases(outcome_raw)])
-patientID_features = rownames(features_checked[complete.cases(features_checked),])
-patientID_complete = intersect(patientID_outcome, patientID_features)
-
-# patientID_outcome = names(outcome_raw)
-# patientID_features = rownames(features_checked)
-# patientID_complete = intersect(patientID_outcome, patientID_features)
-
-# step 5a syntax input for prediction
-
-outcome_complete = outcome_raw[patientID_complete]
-patientID_complete = patientID_complete
-features_complete = features_checked[patientID_complete,]
-sum(clinical_raw$`Multiplex general panel` == 'yes', na.rm = TRUE) #89 patients multiplex
-length(patientID_complete) # 60 patients viable for prediction
-
-# outcome_complete = outcome_raw[patientID_complete]
-# patientID_complete = patientID_complete
-# features_complete = features_checked[patientID_complete,]
-
-
-
-## FEATURE PREPROCESSING
-
-#delete constant features
-delete_constant_features <- function(myfeatures) {
-  constant_features = c()
-  for (j in 1:ncol(myfeatures)) {
-    if (max(myfeatures[,j]) - min(myfeatures[,j]) == 0) {
-      constant_features = c(constant_features,j)
-    }
-  }
-  if (is.null(constant_features)) {
-    return(myfeatures)
-  } else {
-    return(myfeatures[,-constant_features])
-  }
-}
-
-
-#log transform of skewed features
-deskew <- function(myfeatures, threshold) {
-  myfeatures_deskewed = myfeatures
-  for (j in 1:ncol(myfeatures)) {
-    if (skewness(myfeatures[,j])>threshold & sum(myfeatures[,j]<=0)==0) { #skewed and positive
-      for (i in 1:nrow(myfeatures)) {
-        myfeatures_deskewed[i,j] = log(myfeatures[i,j])
-      }
-    }
-  }
-  return(myfeatures_deskewed)
-}
-
-
-#final features for prediction!
-features = scale(deskew(delete_constant_features(features_complete), 1))
-outcome = outcome_complete
-
-
-
-## UNIVARIATE LOGISTIC REGRESSION
-
-#univariate significant features
-
-set.seed(0)
-output = data.frame()
-i = 1
-for (j in 1:ncol(features)) {
-  pvalue = summary(glm(outcome~features[,j], family = "binomial"))$coefficients[2,4]
-  if (pvalue<0.001) {
-    output[i,1] = j
-    output[i,2] = colnames(features)[j]
-    output[i,3] = pvalue
-    i = i+1
-  }
-}
-View(output)
-saveRDS(object = output, file = 'prediction_tumors_borders_uni.RDS')
-
-
-
-
-## RIDGE LOGISTIC REGRESSION
-
-set.seed(0)
-myalpha = 0 #alpha=0 ridge, alpha=1 LASSO
-penaltyfactor = rep(1,ncol(features)) #1 is penalized, 0 is unpenalized
-train_percentage = 0.8 
-nrepeats = 250
-
-aucs = numeric(nrepeats) 
-indices0 = (1:length(outcome))[outcome==0]
-indices1 = (1:length(outcome))[outcome==1]
-for (k in 1:nrepeats) {
-  ind0 = sample(indices0)
-  ind1 = sample(indices1)
-  indices_train = c(ind0[1:round(length(ind0)*train_percentage)],
-                    ind1[1:round(length(ind1)*train_percentage)])
-  indices_test = c(ind0[(round(length(ind0)*train_percentage)+1):length(ind0)],
-                   ind1[(round(length(ind1)*train_percentage)+1):length(ind1)])
-  best_lambda = cv.glmnet(features[indices_train,], outcome[indices_train], alpha=myalpha, penalty.factor = penaltyfactor, nfolds=5, family="binomial")$lambda.min
-  model_train = glmnet(features[indices_train,], outcome[indices_train], alpha=myalpha, penalty.factor = penaltyfactor, family="binomial", lambda=best_lambda)
-  prob_test = as.vector(predict(model_train, type="response", newx=features[indices_test,]))
-  myroc = pROC::roc(outcome[indices_test]~prob_test,levels=c(0,1), direction="<", quiet=TRUE)
-  aucs[k] = myroc$auc
-}
-mean(aucs); sd(aucs); quantile(aucs,0.025); quantile(aucs,0.975) #cross validated AUC
-# [1] 0.4890286
-# [1] 0.1682838
-# 2.5% 
-# 0.2 
-# 97.5% 
-# 0.8285714 
-
-
-
-
-## RIDGE LOGISTIC REGRESSION WITH GROUP STRUCTURE (ECPC)
-
-
-# function for prediction depending on mygrouping
-grouping_prediction <- function(mygrouping) {
-  set.seed(0)
-  ngroups = length(mygrouping)
-  train_percentage = 0.8 
-  nrepeats = 50 
-  
-  aucs = numeric(nrepeats)
-  gammas = matrix(nrow=nrepeats, ncol=ngroups) #group weights
-  indices0 = (1:length(outcome))[outcome==0]
-  indices1 = (1:length(outcome))[outcome==1]
-  for (k in 1:nrepeats) { 
-    print(paste("REPEAT", k))
-    ind0 = sample(indices0)
-    ind1 = sample(indices1)
-    indices_train = c(ind0[1:round(length(ind0)*train_percentage)],
-                      ind1[1:round(length(ind1)*train_percentage)])
-    indices_test = c(ind0[(round(length(ind0)*train_percentage)+1):length(ind0)],
-                     ind1[(round(length(ind1)*train_percentage)+1):length(ind1)])
-    fit = ecpc(Y=outcome[indices_train], X=features[indices_train,], Y2=outcome[indices_test], X2=features[indices_test,], 
-               groupings=list(mygrouping), model="logistic", postselection=FALSE)
-    myroc = pROC::roc(outcome[indices_test]~fit$Ypred,levels=c(0,1), direction="<", quiet=TRUE)
-    aucs[k] = myroc$auc
-    gammas[k,] = fit$gamma
-    
-  }
-  mean(aucs); sd(aucs); quantile(aucs,0.025); quantile(aucs,0.975) #cross validated AUC
-  colMeans(gammas)/sum(colMeans(gammas)) #estimated group weights
-  
-  return(list(aucs,gammas))
-}
-
-# groupings per image type
-mygrouping1 = list(1:1366,1367:2732) 
-
-out = grouping_prediction(mygrouping1)
-aucs = out[[1]]
-gammas = out[[2]]
-mean(aucs); sd(aucs); quantile(aucs,0.025); quantile(aucs,0.975); #cross validated AUC
-# [1] 0.6931429
-# [1] 0.1524816
-# 2.5% 
-# 0.3335714 
-# 97.5% 
-# 0.9078571 
-colMeans(gammas)/sum(colMeans(gammas)) #estimated group weights
-# [1] 0.6507198 0.3492802
-
-# groupings per groups of statistics general (distinct groups)
-counts = which(str_detect(colnames(features),'counts_[a-z]+|density|X2stat'))  # L64 Regex: which(str_detect(colnames(features),'counts_[a-z]+|density|X2stat')) 
-MED_MAD_SS = which(str_detect(colnames(features),'MED|MAD|distance_ratio')) # 108 Regex: which(str_detect(colnames(features),'MED|MAD|distance_ratio'))
-centered = which(str_detect(colnames(features), 'Centered_')) # L1280 Regex: which(str_detect(colnames(features), 'Centered_'))
-normalized = which(str_detect(colnames(features), 'Normalized_')) # L1280 Regex: which(str_detect(colnames(features), 'Normalized_'))
-
-mygrouping2 = list(counts,MED_MAD_SS,normalized,centered) # L2732 sum(unlist(lapply(mygrouping1,function(x) length(x))))
-# all features used: setdiff(colnames(features),unique(colnames(features)[unlist(mygrouping2)])) = empty
-
-out = grouping_prediction(mygrouping2)
-aucs = out[[1]]
-gammas = out[[2]]
-mean(aucs); sd(aucs); quantile(aucs,0.025); quantile(aucs,0.975); #cross validated AUC
-# [1] 0.7445714
-# [1] 0.1324375
-# 2.5% 
-# 0.4985714 
-# 97.5% 
-# 0.9078571 
-colMeans(gammas)/sum(colMeans(gammas)) #estimated group weights
-# [1] 0.37229102 0.54250764 0.06293505 0.02226629
-
-
-# groupings per statistics detailed (distinct groups)
-counts_ss = which(str_detect(colnames(features),'counts_[a-z]+|density|X2stat|distance_ratio'))  # L68 Regex: which(str_detect(colnames(features),'counts_[a-z]+|density|X2stat|distance_ratio')) 
-MED = which(str_detect(colnames(features),'MED')) # L52 Regex: which(str_detect(colnames(features),'MED'))
-# to view: View(colnames(features)[which(str_detect(colnames(features),'MED'))])
-MAD = which(str_detect(colnames(features),'MAD')) # L52 Regex: which(str_detect(colnames(features),'MAD'))
-Fstat = which(str_detect(colnames(features),'F_radius')) # L128 which(str_detect(colnames(features),'F_radius'))
-Gstat = which(str_detect(colnames(features),'G_radius|Gdot_radius')) # L640 which(str_detect(colnames(features),'G_radius|Gdot_radius'))
-Kstat = which(str_detect(colnames(features),'K_radius|Kdot_radius'))  # L640 which(str_detect(colnames(features),'K_radius|Kdot_radius'))
-Lstat = which(str_detect(colnames(features),'L_radius|Ldot_radius')) # L640 which(str_detect(colnames(features),'L_radius|Ldot_radius'))
-pcfstat = which(str_detect(colnames(features),'pcf_radius')) # L512 which(str_detect(colnames(features),'pcf_radius'))
-
-mygrouping3 = list(counts_ss,MED,MAD,Fstat,Gstat,Kstat,Lstat,pcfstat) # L2732 sum(unlist(lapply(mygrouping,function(x) length(x))))
-# all features used: setdiff(colnames(features),unique(colnames(features)[unlist(mygrouping3)])) = empty
-
-out = grouping_prediction(mygrouping3)
-aucs = out[[1]]
-gammas = out[[2]]
-mean(aucs); sd(aucs); quantile(aucs,0.025); quantile(aucs,0.975); #cross validated AUC
-# [1] 0.744
-# [1] 0.1404414
-# 2.5% 
-# 0.435 
-# 97.5% 
-# 0.9428571 
-colMeans(gammas)/sum(colMeans(gammas)) #estimated group weights
-# [1] 0.041109744 0.691394048 0.035005564 0.175659482 0.004272093 0.004496926 0.015256164 0.032805979
-
-
-# groupings per statistics detailed with radius close (<10) and far (>=10) (distinct groups)
-counts_ss = which(str_detect(colnames(features),'counts_[a-z]+|density|X2stat|distance_ratio')) # L68 Regex: which(str_detect(colnames(features),'counts_[a-z]+|density|X2stat|distance_ratio')) 
-MED = which(str_detect(colnames(features),'MED')) # L52 Regex: which(str_detect(colnames(features),'MED'))
-MAD = which(str_detect(colnames(features),'MAD')) # L52 Regex: which(str_detect(colnames(features),'MAD'))
-Fstat_close = which(str_detect(colnames(features),'F_radius [0-9]_')) # L48
-Fstat_far = which(str_detect(colnames(features),'F_radius [0-9][0-9]_')) # L80 
-Gstat_close = which(str_detect(colnames(features),'G_radius [0-9]_|Gdot_radius [0-9]_')) # L240 
-Gstat_far = which(str_detect(colnames(features),'G_radius [0-9][0-9]_|Gdot_radius [0-9][0-9]_')) # L400 
-Kstat_close = which(str_detect(colnames(features),'K_radius [0-9]_|Kdot_radius [0-9]_')) # L240 
-Kstat_far = which(str_detect(colnames(features),'K_radius [0-9][0-9]_|Kdot_radius [0-9][0-9]_')) # L400 
-Lstat_close = which(str_detect(colnames(features),'L_radius [0-9]_|Ldot_radius [0-9]_')) # L240 
-Lstat_far = which(str_detect(colnames(features),'L_radius [0-9][0-9]_|Ldot_radius [0-9][0-9]_')) # L400 
-pcfstat_close = which(str_detect(colnames(features),'pcf_radius [0-9]_')) # L192 
-pcfstat_far = which(str_detect(colnames(features),'pcf_radius [0-9][0-9]_')) # L320 
-
-mygrouping4 = list(counts_ss,MED,MAD,
-                  Fstat_close,Fstat_far,Gstat_close, Gstat_far,
-                  Kstat_close,Kstat_far,Lstat_close,Lstat_far,
-                  pcfstat_close,pcfstat_far) # L1366 sum(unlist(lapply(mygrouping,function(x) length(x))))
-# all features used: setdiff(colnames(features),unique(colnames(features)[unlist(mygrouping)])) = empty
-
-out = grouping_prediction(mygrouping4)
-aucs = out[[1]]
-gammas = out[[2]]
-mean(aucs); sd(aucs); quantile(aucs,0.025); quantile(aucs,0.975); #cross validated AUC
-# [1] 0.732
-# [1] 0.1362177
-# 2.5% 
-# 0.435 
-# 97.5% 
-# 0.9428571 
-colMeans(gammas)/sum(colMeans(gammas)) #estimated group weights
-# [1] 0.0734123292 0.4080702416 0.0421463307 0.0048541466 0.2656108075 0.0000000000 0.0605658414 0.0260265917
-# [9] 0.0136201945 0.0558714913 0.0005398924 0.0323981469 0.0168839862
-
-
-# groupings per phenotype (overlapping groups)
-Macrophage = which(str_detect(colnames(features),'Macrophage|distance_ratio')) #L1094
-Tcells = which(str_detect(colnames(features),'Tcells|distance_ratio')) #L1094
-Tumors = which(str_detect(colnames(features),'Tumor|distance_ratio')) #L1094
-Others = which(str_detect(colnames(features),'Others')) #L1094
-
-mygrouping5 = list(Macrophage,Tcells,Tumors,Others) # L5191 sum(unlist(lapply(mygrouping,function(x) length(x))))
-# all features used: setdiff(colnames(features),unique(colnames(features)[unlist(mygrouping5)])) = empty
-
-out = grouping_prediction(mygrouping5)
-aucs = out[[1]]
-gammas = out[[2]]
-mean(aucs); sd(aucs); quantile(aucs,0.025); quantile(aucs,0.975); #cross validated AUC
-# error
-# error
-# error
-# error
-# error
-# error
-colMeans(gammas)/sum(colMeans(gammas)) #estimated group weights
-# error
-
-
-
-## RANDOM FOREST WITH GROUP STRUCTURE (CORF)
 
