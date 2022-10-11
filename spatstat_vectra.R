@@ -21,7 +21,6 @@ do_analyse <- function(seg_path, PhenoOrder = NULL, ColsOrder = NULL,
                        r_vec = NULL, spatstat_statistics = 'ALL', 
                        reference = 'Tumors', ...) {
   
-  
   # Create table with the right spatial dimensions such as described by the component file
   Intable = purrr::map_df(seg_path, read_cell_seg_data, pixels_per_micron = "auto",remove_units = FALSE)
   
@@ -31,7 +30,7 @@ do_analyse <- function(seg_path, PhenoOrder = NULL, ColsOrder = NULL,
   # define csd for ppp
   csd <- Intable[, c(PhenoCol, XposCol, YposCol)]
   colnames(csd) = c('Phenotype', 'Cell X Position',  'Cell Y Position')
-  
+ 
   
   check_elsestate = FALSE
   
@@ -60,7 +59,7 @@ do_analyse <- function(seg_path, PhenoOrder = NULL, ColsOrder = NULL,
     }
     colors_phenotype = ColsOrder
   }
-  
+
   missing_in_data = setdiff(names(PhenoOrder),pheno_vector)
   if (!is_empty(missing_in_data)){
     warning('Target phenotype ', missing_in_data, ' is missing in the data sample\n')
@@ -174,6 +173,7 @@ do_analyse <- function(seg_path, PhenoOrder = NULL, ColsOrder = NULL,
         counts_pairwise[phenotype1,phenotype2] = 0
       } else{
         counts_pairwise[phenotype1,phenotype2] = counts_sample[[phenotype1]]/counts_sample[[phenotype2]]
+        #counts_pairwise[phenotype1,phenotype2] = log2(counts_sample[[phenotype1]]+1)-log2(counts_sample[[phenotype2]]+1)
       }
     }
   }
@@ -305,6 +305,8 @@ do_analyse <- function(seg_path, PhenoOrder = NULL, ColsOrder = NULL,
   }
   #### gather the output of the computations in a list ####
   output_data_raw = list()
+  output_data_raw[["csd"]] = csd
+  output_data_raw[["distance_matrix"]] = pairwise_distance 
   output_data_raw[["csd_ppp"]] = csd_ppp
   output_data_raw[["counts_sample"]] = counts_sample
   output_data_raw[["counts_normed_sample"]] = counts_normed_sample
@@ -344,7 +346,7 @@ getMAD <- function(data_with_distance, pairwise_distances, pheno_vector, missing
   phenos = c(pheno_vector, missing_in_data)
   # phenos = pheno_vector
   dim_square = length(phenos)
-  
+ 
   MED = matrix(NA , nrow = dim_square, ncol = dim_square)
   colnames(MED) = phenos
   rownames(MED) = phenos
@@ -377,38 +379,43 @@ getMAD <- function(data_with_distance, pairwise_distances, pheno_vector, missing
   ratio_distances = NULL 
   combination = combn(setdiff(pheno_vector, reference), 2)
   combination = cbind(combination,   rbind(combination[2,], combination[1,]))
+
+  
+
   if (!any(reference %in% missing_in_data)) {
       refs = data_with_distance %>% filter(`Phenotype` %in% reference)
 
-      for (i in 1:ncol(combination)) {
-          if ((!any(combination[,i] %in% missing_in_data))) {
-              Ctype1 = combination[1,i]
-              Ctype2 = combination[2,i]
-              dist_ctype1 = data_with_distance %>% filter(`Phenotype` == Ctype1)
+      if (nrow(refs)!=0) {
+          for (i in 1:ncol(combination)) {
+              if ((!any(combination[,i] %in% missing_in_data))) {
+                  Ctype1 = combination[1,i]
+                  Ctype2 = combination[2,i]
+                  dist_ctype1 = data_with_distance %>% filter(`Phenotype` == Ctype1)
 
-              print(refs$`Cell ID`)
-              mat = matrix(NA, nrow=length(refs$`Cell ID`), ncol=5,
+         
+                  mat = matrix(NA, nrow=length(refs$`Cell ID`), ncol=5,
                            dimnames = list(paste0('Cell ID ', refs$`Cell ID`),
                                            c(paste0('Cell ID ',Ctype1), paste0('Distance to ', Ctype1),
                                              paste0('Cell ID ',Ctype2), paste0('Distance to ', Ctype2),
                                              paste0('Relative_distance_', Ctype1, '_', Ctype2)
                                            )
-                                )
-                           )
-              for (refID in refs$`Cell ID`) {
-                  ctype1_ID = as.integer(refs[which(refs$`Cell ID` == refID), paste0('Cell ID ', Ctype1)])
-                  mindist_ctype1 = as.numeric(refs[which(refs$`Cell ID` == refID), paste0('Distance to ', Ctype1)])                  
-                  ctype2_ID = as.integer(dist_ctype1[which(dist_ctype1$`Cell ID` == ctype1_ID), 
+                                    )
+                               )
+                  for (refID in refs$`Cell ID`) {
+                      ctype1_ID = as.integer(refs[which(refs$`Cell ID` == refID), paste0('Cell ID ', Ctype1)])
+                      mindist_ctype1 = as.numeric(refs[which(refs$`Cell ID` == refID), paste0('Distance to ', Ctype1)])                  
+                      ctype2_ID = as.integer(dist_ctype1[which(dist_ctype1$`Cell ID` == ctype1_ID), 
                                          paste0('Cell ID ', Ctype2)])
 
-                  mindist_ctype1_ctype2 = as.numeric(dist_ctype1[which(dist_ctype1$`Cell ID` == ctype1_ID), 
+                      mindist_ctype1_ctype2 = as.numeric(dist_ctype1[which(dist_ctype1$`Cell ID` == ctype1_ID), 
                                                   paste0('Distance to ', Ctype2)])
-                  mat[paste0('Cell ID ', refID), ] =
-                      c(ctype1_ID, mindist_ctype1, ctype2_ID, mindist_ctype1_ctype2,
-                        mindist_ctype1/mindist_ctype1_ctype2
-                        )
+                      mat[paste0('Cell ID ', refID), ] =
+                          c(ctype1_ID, mindist_ctype1, ctype2_ID, mindist_ctype1_ctype2,
+                            mindist_ctype1/mindist_ctype1_ctype2
+                            )
+                  }
+                  ratio_distances = cbind(ratio_distances, mat)
               }
-              ratio_distances = cbind(ratio_distances, mat)
           }
       }
   }
@@ -618,10 +625,16 @@ feature_extract <- function(outputs){
   
   mat_counts_normed = matrix(0, nrow = length(counts_normed), ncol = length(outputs),
                       dimnames = list(paste0('counts_normed_sample_', sort(counts_normed)), names(outputs)))
+ 
+  mat_counts_lognormed = matrix(0, nrow = length(counts_normed), ncol = length(outputs),
+                      dimnames = list(paste0('counts_lognormed_sample_', sort(counts_normed)), names(outputs)))
   
   # create a matrix for density
   mat_density = matrix(0, nrow = length(dens), ncol = length(outputs),
                 dimnames = list(paste0('density_sample_', sort(dens)), names(outputs)))
+ 
+  mat_density_lognormed = matrix(0, nrow = length(dens), ncol = length(outputs),
+                dimnames = list(paste0('density_lognormed_sample_', sort(dens)), names(outputs)))
   
   # create a matrix for Chi-squared statistic of quadratcounts
   mat_X2stat = matrix(NA, nrow = length(X2stat), ncol = length(outputs),
@@ -635,15 +648,20 @@ feature_extract <- function(outputs){
   for (i in seq_along(outputs)) {
     out = outputs[[i]]
     name = names(outputs)[i]
-    data_counts = out$counts_sample
+    size_image <- diff(out$csd_ppp$window$xrange) * diff(out$csd_ppp$window$yrange)
+    data_counts = out$counts_sample/size_image
     data_counts_normed = out$counts_normed_sample
+    data_counts_lognormed = log(out$counts_normed_sample*10^6+1)
     data_density = out$density_sample
+    data_density_normed = log(out$density_sample*10^6+1)
     data_X2stat = out$quadratcount_X2statistic
     data_X2stat_normed = out$quadratcount_X2statistic_normed
     for (featname in names(data_counts)){
       mat_counts[paste0('counts_sample_',featname),name] = data_counts[[featname]]
       mat_counts_normed[paste0('counts_normed_sample_',featname),name] = data_counts_normed[[featname]]
+      mat_counts_lognormed[paste0('counts_lognormed_sample_',featname),name] = data_counts_lognormed[[featname]]
       mat_density[paste0('density_sample_',featname),name] = data_density[[featname]]
+      mat_density_lognormed[paste0('density_lognormed_sample_',featname),name] = data_density_normed[[featname]]
       mat_X2stat[paste0('X2stat_sample_',featname),name] = data_X2stat[[featname]]
       mat_X2stat_normed[paste0('X2stat_normed_sample_',featname),name] = data_X2stat_normed[[featname]]
     }
@@ -681,7 +699,7 @@ feature_extract <- function(outputs){
   for (i in seq_along(outputs)) {
     out = outputs[[i]]
     name = names(outputs)[i]
-    data_counts_pairwise = out$counts_pairwise
+    data_counts_pairwise = log(out$counts_pairwise+1)
     
     for (featname_from in rownames(data_counts_pairwise)){
       for (featname_to in colnames(data_counts_pairwise)){
@@ -829,10 +847,12 @@ feature_extract <- function(outputs){
   
   
   if (!is.null(spatstat_statistics_available)){
-    mat = t(rbind(mat_counts,mat_counts_normed, mat_counts_pairwise, mat_density, mat_X2stat, mat_X2stat_normed,
+    mat = t(rbind(mat_counts,mat_counts_normed, mat_counts_lognormed, mat_counts_pairwise, mat_density, mat_density_lognormed,  
+                  mat_X2stat, mat_X2stat_normed,
                 mat_med_min, mat_med, mat_mad_min, mat_mad, mat_ratio_distances_median, mat_ratio_distances_mad, mat_ripleys))
   } else {
-    mat = t(rbind(mat_counts,mat_counts_normed, mat_counts_pairwise, mat_density, mat_X2stat, mat_X2stat_normed,
+    mat = t(rbind(mat_counts,mat_counts_normed,mat_counts_lognormed, mat_counts_pairwise, mat_density, mat_density_lognormed, 
+                  mat_X2stat, mat_X2stat_normed,
                   mat_med_min, mat_med, mat_mad_min, mat_mad, mat_ratio_distances_median, mat_ratio_distances_mad))
   }
   

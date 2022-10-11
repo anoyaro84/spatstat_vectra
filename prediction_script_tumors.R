@@ -9,7 +9,6 @@ library(remotes); install_github("Mirrelijn/ecpc/Rpackage")
 library(ecpc); ?ecpc
 library(MASS)
 library(penalized)
-library(glmnet)
 library(mvtnorm)
 library(gglasso)
 library(mgcv)

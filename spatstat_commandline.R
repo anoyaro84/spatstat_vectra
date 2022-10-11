@@ -24,6 +24,9 @@ if (exists('snakemake')) { # if the script is used by snakemake
     path_figure = args[8]
 }
 
+if (is.character(pheno_vector_absolut)) {
+    pheno_vector_absolut = strsplit(pheno_vector_absolut, split=',')[[1]]
+}
 
 print(r_vec)
 print(pheno_vector_absolut)
