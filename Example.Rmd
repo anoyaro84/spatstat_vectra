@@ -1,6 +1,6 @@
 
 ---
-title: "Main script Erik Vectra analysis"
+title: "Example Vectra image analysis"
 output:
   html_document:
     toc: yes
@@ -8,14 +8,135 @@ output:
 
 
 ```{r load_package}
+library(cowplot)
+library(ggplot2)
 source('spatstat_vectra.R')
 
+plot_function <- function(csd, ctypes) {
+    plt <- ggplot() + theme_bw() + 
+           geom_point(data = csd[grep('Other', csd$Phenotype),],
+               aes(x=x, y=y), col = '#b5b3ae', size=2.5) +
+        geom_point(data = csd[csd$Phenotype%in%c('PAX5+PDL1-','PAX5+PDL1+'),],
+               aes(x=x, y=y), col = '#fc8105', size=2.5) +
+           geom_point(data = csd[grep('PAX5+PDL1+', csd$Phenotype, fixed=T),],
+               aes(x=x, y=y), col = '#fff761', size=0.01, shape=1, stroke=1) + 
+           geom_point(data = csd[grep('CD3+CD8-',csd$Phenotype, fixed=T),],
+               aes(x=x, y=y), col = '#34c9eb', size=2.5) +
+           geom_point(data = csd[grep('CD3+CD8+',csd$Phenotype, fixed=T),],
+               aes(x=x, y=y), col = '#4634eb', size=2.5) +
+            geom_point(data = csd[grep('PD1+', csd$Phenotype, fixed=T),],
+               aes(x=x, y=y), col = '#fff761', size=0.01,shape=1, stroke=1) + 
+           geom_point(data = csd[grep('CD163', csd$Phenotype),],
+               aes(x=x, y=y), col = '#a834eb', size=2.5) +
+           geom_point(data = csd[grep('CD163+PDL1+', csd$Phenotype, fixed=T),],
+               aes(x=x, y=y), col = '#fff761', size=0.01, shape=1, stroke=1) 
+    return(plt +theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+                   panel.background = element_blank()))
+}
 
-base_path <- '../Exported data tables/' # Working for Yongsoo
-base_path <- path.expand('~/Studie/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping') # working for Erik
-paths_to_seg <- list_cell_seg_files(base_path)
-cat("There are", length(paths_to_seg), "segmentation paths currently loaded")
+```
 
+
+```{r example_images, fig.width=12, fig.height=6}
+
+images = c(
+    'exported_mIF/HO105-003_[11564,35679]_cell_seg_data.txt'
+#    'exported_mIF/HO105-003_[11564,35679]_cell_seg_data.txt',
+#    'exported_mIF/HO105-180_[15869,40356]_cell_seg_data.txt'
+#    'exported_mIF/HO105-126_[15975,49075]_cell_seg_data.txt',
+#    'exported_mIF/HO105-025_[9621,46812]_cell_seg_data.txt',
+#    'exported_mIF/HO105-036_[10536,42112]_cell_seg_data.txt',
+#    'exported_mIF/HO105-182_[8076,47954]_cell_seg_data.txt',
+#    'exported_mIF/HO105-010_[15489,46493]_cell_seg_data.txt',
+#    'exported_mIF/HO105-020_[9758,38701]_cell_seg_data.txt',
+#    'exported_mIF/HO105-080_[9000,38682]_cell_seg_data.txt',
+#    'exported_mIF/HO105-010_[14712,46842]_cell_seg_data.txt',
+#    'exported_mIF/HO105-020_[10157,38113]_cell_seg_data.txt'
+)
+
+ctypepairs = list(
+    c('CD3+CD8-PD1-', 'CD8+CD8-PD1+', 'CD3+CD8+PD1-', 'CD3+CD8+PD1+'),
+    c('CD163+PDL1-', 'CD163+PDL1+', 'CD3+CD8+PD1-', 'CD3+CD8+PD1+'),
+    c('CD163+PDL1-', 'CD163+PDL1+', 'CD3+CD8+PD1-'),
+    c('CD3+CD8-PD1-', 'CD3+CD8-PD1+', 'PAX5+PDL1-'),
+    c('CD163+PDL1-', 'CD163+PDL1+'),
+    c('PAX5+PDL1+', 'CD163+PDL1+'),
+    c('CD163+PDL1-', 'CD163+PDL1+'),
+    c('CD163+PDL1-', 'CD163+PDL1+'),
+    c('CD163+PDL1-', 'CD163+PDL1+'),
+    c('CD163+PDL1-', 'CD163+PDL1+'),
+    c('CD163+PDL1-', 'CD163+PDL1+'),
+    c('CD163+PDL1-', 'CD163+PDL1+')
+                  )
+
+
+XposCol = 'Cell X Position'
+YposCol = 'Cell Y Position'
+PhenoCol = 'Phenotype'
+
+#i=1
+for (i in 1:length(images)) {
+    plist = list()
+    Table <- purrr::map_df(images[i], read_cell_seg_data, 
+                       pixels_per_micron = "auto", remove_units=FALSE)
+
+    # replace empty phenotype with "Other"
+    Table$Phenotype[Table$Phenotype == ""] = "Other"
+  
+    # define csd for ppp
+    csd <- as.data.frame(Table[, c(PhenoCol, XposCol, YposCol)])
+    colnames(csd) = c('Phenotype', 'x',  'y')
+
+    plt1 <- local({
+
+        plt1 = plot_function(csd, c('Tumor', 'Tcell', 'Macrophage', 'Other'))
+        #plt <- plt + ggtitle(images[i]) 
+        plt1 <- plt1 + #ggtitle(images[i]) + 
+          theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+                axis.title.x=element_blank(), axis.text.x=element_blank(),
+                axis.ticks.x=element_blank(), axis.title.y=element_blank(), 
+                axis.text.y=element_blank(), axis.ticks.y=element_blank(),
+                panel.background = element_blank()) + ggtitle('all cell types')# + scale_y_reverse()
+        return(plt1)
+    })
+
+    #print(plt1)    
+    xlims <- layer_scales(plt1)$x$get_limits()
+    ylims <- layer_scales(plt1)$y$get_limits()
+
+    csd2 <- csd
+    plt2 <- plot_function(csd2[csd2$Phenotype%in%ctypepairs[[i]],], 
+                         c('Tumor', 'Tcell', 'Macrophage', 'Other')) + 
+           xlim(xlims) + ylim(ylims)# + scale_y_reverse()
+    plt2 <- plt2 + 
+          theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+                axis.title.x=element_blank(), axis.text.x=element_blank(),
+                axis.ticks.x=element_blank(), axis.title.y=element_blank(), 
+                axis.text.y=element_blank(), axis.ticks.y=element_blank(),
+                panel.background = element_blank()) + 
+           ggtitle(paste0('focus: ', paste0(ctypepairs[[i]], collapse='/')))# + scale_y_reverse() 
+
+    plot_row <- plot_grid(plt1, plt2)
+
+    title <- ggdraw() +
+        draw_label(
+                   images[i],
+                   fontface = 'bold',
+                   x = 0,
+                   hjust = 0
+                   ) +
+           theme(
+                 plot.margin = margin(0,0,0,7)
+                 )
+    
+    print(plot_grid(title, plot_row, ncol=1, rel_heights = c(0.1,1)))
+}
+
+
+```
+
+
+```{r, eval=T, cache=T, warning=F, message=F}
 
 phenotype_complete = c("CD163+PDL1-","CD163+PDL1+",
                        "CD3+CD8-PD1-", "CD3+CD8-PD1+", "CD3+CD8+PD1-", "CD3+CD8+PD1+",
@@ -31,9 +152,36 @@ color_complete = list("magenta", "brown",
 names(color_complete) = phenotype_complete
 
 fig.prefix.complete = './complete'
-
+selected_spatstat_statistics = c('K', 'L') 
+# can be any subset of ('K', 'Kdot', 'L', 'Ldot', 'F', 'J', 'G', 'Gdot', 'pcf')
 r_vec = c(10)
 
+plotter_sample = T
+plotter_quadrat = T
+plotter_alltypes = T
+
+plotter = list(plotter_sample, plotter_quadrat, plotter_alltypes)
+
+outputs_complete = list()
+for (file in images){
+	cat('processing', file)
+  
+  samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(file, '/')[[1]],1))
+  outputs_complete[[samplename]] = do_analyse(seg_path = file, PhenoOrder = phenotype_complete, 
+                                          ColsOrder = color_complete, XposCol = 'Cell X Position', 
+                                          YposCol = 'Cell Y Position', PhenoCol = 'Phenotype',
+                      sample_name = samplename, plotter = plotter, fig.prefix = fig.prefix.complete,
+                      r_vec = r_vec, spatstat_statistics = selected_spatstat_statistics)
+}
+
+```
+The script `do_analyse` measured multiple statistics (`K` and `L` statistics were chosen in the example above) for the given image (`seg_path`).
+Apart from the statistics itself, it will save images at the location specified by `fig.prefix`. 
+One example image (K statistics) of all pairs of cell types considered (defined by `PhenoOrder`) is shown below. Note that `+` and `-` signs are converted to `T` and `F` for computation reasons. The red line and gray shadow indicate theoretical statistics when the pair of cell types have no geometric association. The solid black line represents the actual statistic.
+
+![Example image](./complete/HO105-003_[11564,35679]/HO105-003_[11564,35679]_statistic_K.png)
+
+```{r, eval=F}
 
 phenotype_simple = list(Macrophage = c("CD163+PDL1-","CD163+PDL1+"),
                       Tcells = c("CD3+CD8-PD1-", "CD3+CD8-PD1+", "CD3+CD8+PD1-", "CD3+CD8+PD1+"),
@@ -44,10 +192,24 @@ phenotype_simple = list(Macrophage = c("CD163+PDL1-","CD163+PDL1+"),
 color_simple = c(Macrophage = "magenta", Tcells = "red", Tumors = "orange", Others = "gray")
 
 fig.prefix.simple = './simple'
+
+outputs_simple = list()
+for (file in images){
+	cat('processing', file)
+  
+  samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(file, '/')[[1]],1))
+  outputs_simple[[samplename]] = do_analyse(seg_path = file, PhenoOrder = phenotype_simple, 
+                                          ColsOrder = color_complete, XposCol = 'Cell X Position', 
+                                          YposCol = 'Cell Y Position', PhenoCol = 'Phenotype',
+                      sample_name = samplename, plotter = plotter, fig.prefix = fig.prefix.simple,
+                      r_vec = r_vec, spatstat_statistics = selected_spatstat_statistics)
+}
+
+
 ```
 
 
-```{r HO105_extreme,fig.width=8, fig.height=8} 
+```{r HO105_extreme,fig.width=8, fig.height=8, eval=F} 
 source('spatstat_vectra.R')
 # source('C:/Users/erikb/Documents/Studie/Thesis - Local/spatstat_vectra_backup_2020-05-04/spatstat_vectra 2020-07-21.R')
 extreme = file.path(base_path, c(
@@ -85,7 +247,7 @@ plotter_alltypes = T
 plotter = list(plotter_sample, plotter_quadrat, plotter_alltypes)
 
 # Select spatial statistics, or NULL then all inbuild spatial statistics are selected
-selected_spatstat_statistics = list('F', "pcf") # 'ALL', NULL, list('Gdot', 'K') list("G","F", "J","Gdot", "Jdot", "K", "L", "pcf", "Kdot", "Ldot")
+selected_spatstat_statistics = list('K', "L") # 'ALL', NULL, list('Gdot', 'K') list("G","F", "J","Gdot", "Jdot", "K", "L", "pcf", "Kdot", "Ldot")
 
 # debug
 
@@ -122,7 +284,7 @@ M = feature_extract(outputs = outputs_auto)
 ```
 
 
-```{r marit HO105 image check  all via import, fig.width=8, fig.height=8}
+```{r marit HO105 image check  all via import, fig.width=8, fig.height=8, eval=F}
 source('spatstat_vectra.R')
 library('readxl')
 
@@ -217,7 +379,7 @@ names(border_images) = HOnrs_border
 
 ```
 
-```{r clinical vs prediction data 22nd Jun}
+```{r clinical vs prediction data 22nd Jun, eval=F}
 source('spatstat_vectra.R')
 
 # import simplified matrix
@@ -314,7 +476,7 @@ width_sign_band_max = apply(m,1,function(x) max(x,na.rm = TRUE))
 
 ```
 
-```{r clinical vs prediction data 26nd Jun}
+```{r clinical vs prediction data 26nd Jun, eval=F}
 source('spatstat_vectra.R')
 
 # import simplified matrix
@@ -359,7 +521,7 @@ sixes = df_and_NAs[sixes_names <- 'HO105-061_[11807,41972]',str_subset(colnames(
 
 ```
 
-```{r clinical vs prediction data 30nd Jun}
+```{r clinical vs prediction data 30nd Jun, eval=F}
 source('spatstat_vectra.R')
 
 # import simplified matrix
