@@ -3,8 +3,8 @@
 library(tidyverse)
 library(spatstat)
 library(spdep)
-library(remotes)
-library(tiff)
+#library(remotes)
+#library(tiff)
 library(phenoptr)
 # library(zoo)
 library(RColorBrewer)
@@ -19,8 +19,7 @@ do_analyse <- function(seg_path, PhenoOrder = NULL, ColsOrder = NULL,
                        XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype',
                        sample_name = 'Input sample', plotter = c(FALSE,FALSE,FALSE), fig.prefix = '.',
                        r_vec = NULL, spatstat_statistics = 'ALL', 
-                       reference = 'Tumors', ...) {
-  
+                       reference = 'Tumors',plotOnly=NULL,image_shape = 'concave', ...) {
   # Create table with the right spatial dimensions such as described by the component file
   Intable = purrr::map_df(seg_path, read_cell_seg_data, pixels_per_micron = "auto",remove_units = FALSE)
   
@@ -58,6 +57,9 @@ do_analyse <- function(seg_path, PhenoOrder = NULL, ColsOrder = NULL,
       check_elsestate = TRUE
     }
     colors_phenotype = ColsOrder
+    print(colors_phenotype)
+    print(PhenoOrder)
+    names(colors_phenotype) =  PhenoOrder
   }
 
   missing_in_data = setdiff(names(PhenoOrder),pheno_vector)
@@ -115,24 +117,45 @@ do_analyse <- function(seg_path, PhenoOrder = NULL, ColsOrder = NULL,
   
   
   #### Creation Poisson Point Process and quadratcounts figures ####
-  
-  csd_ppp = ppp(x=csd[[XposCol]], y=csd[[YposCol]], 
-                window = owin(c(min(csd[[XposCol]]), max(csd[[XposCol]])), c(min(csd[[YposCol]]), max(csd[[YposCol]]))),
-                marks = factor(x = csd[[PhenoCol]], levels = pheno_vector)) #sort? pheno_vector[order(match(pheno_vector,names(PhenoOrder)))]
-                # marks = factor(x = csd[[PhenoCol]], levels = names(PhenoOrder))) #sort? names(PhenoOrder)[order(match(names(PhenoOrder),pheno_vector))]
-  unitname(csd_ppp) = list("micron", "microns", 1)
-  
-  
-  if (isTRUE(plotter[[1]])) {
     
-    png(filename = paste0(file.path(output_dir, sample_name),".png"), width = 600, height = 480)
-    par(mar=rep(0.5, 4))
-    plot(csd_ppp, cols = unlist(colors_phenotype[levels(csd_ppp$marks)]), xlab = "", ylab = "", main = "", pch = 20)
-    title(paste("Location of cells and their phenotype\n in sample", sample_name), line = -3)
-    dev.off()
-  }
-  
-  
+    if(image_shape == 'circle'){
+        window <- disc(radius = min(2*sd(csd[[XposCol]]), 2*sd(csd[[YposCol]])), 
+                              centre = c(mean(range((csd[[XposCol]]))), mean(range(csd[[YposCol]]))))
+    }else{
+        # default shape: rectangle
+        window <- owin(c(min(csd[[XposCol]]), max(csd[[XposCol]])), c(min(csd[[YposCol]]), max(csd[[YposCol]])))
+    }
+
+   if(!image_shape %in% c('convex','concave')){
+  csd_ppp = ppp(x=csd[[XposCol]], y=csd[[YposCol]], 
+                window = window,
+                marks = factor(x = csd[[PhenoCol]], levels = pheno_vector)) #sort? pheno_vector[order(match(pheno_vector,names(PhenoOrder)))]
+                                        # marks = factor(x = csd[[PhenoCol]], levels = names(PhenoOrder))) #sort? names(PhenoOrder)[order(match(names(PhenoOrder),pheno_vector))]
+   }else if(image_shape == 'convex'){
+       csd_ppp = ppp(x=csd[[XposCol]], y=csd[[YposCol]], 
+                     poly = list(x=convexhull.xy(x=csd[[XposCol]], y=csd[[YposCol]])$bdry[[1]]$x,
+                                 y=convexhull.xy(x=csd[[XposCol]], y=csd[[YposCol]])$bdry[[1]]$y),
+                     marks = factor(x = csd[[PhenoCol]], levels = pheno_vector)) 
+       
+
+   }else if(image_shape == 'concave'){
+       concave <- concaveman::concaveman(as.matrix(csd[,c(XposCol,YposCol)]),concavity = 0.685,length_threshold=50)
+       csd_ppp = ppp(x=csd[[XposCol]], y=csd[[YposCol]],
+                     poly = list(apply(concave,2, rev)),
+                     marks = factor(x = csd[[PhenoCol]], levels = pheno_vector))
+   }
+    unitname(csd_ppp) = list("micron", "microns", 1)
+    
+    
+    if (isTRUE(plotter[[1]])) {
+        
+        png(filename = paste0(file.path(output_dir, sample_name),".png"), width = 600, height = 480)
+        par(mar=rep(0.5, 4))
+        plot(csd_ppp, cols = unlist(colors_phenotype[levels(csd_ppp$marks)]), xlab = "", ylab = "", main = "", pch = 20)
+        title(paste("Location of cells and their phenotype\n in sample", sample_name), line = -3)
+        dev.off()
+    }
+    if(plotOnly != TRUE){
   ##### normal statistics: Counts and Density ####
   
   counts_sample = summary(csd_ppp)$marks[['frequency']]
@@ -334,9 +357,9 @@ do_analyse <- function(seg_path, PhenoOrder = NULL, ColsOrder = NULL,
 #  output_data[['output_data_raw']] = output_data_raw
 #  output_data[['output_data_matrix']] = output_data_matrix
   
-  return(output_data_raw)
+        return(output_data_raw)
+    }
 }
-
 
 #### function normal statistic: Median and Median Absolute Deviation ####
 getMAD <- function(data_with_distance, pairwise_distances, pheno_vector, missing_in_data,
@@ -1062,3 +1085,4 @@ calculate_area_norm <- function (ripleys, spatstat_statistic){
   
   return(c(AUC,Norm_max))
 }
+
