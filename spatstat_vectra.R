@@ -17,12 +17,11 @@ library(latex2exp)
 
 do_analyse <- function(seg_path, PhenoOrder = NULL, ColsOrder = NULL,
                        XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype',
-                       sample_name = 'Input sample', plotter = c(FALSE,FALSE,FALSE), fig.prefix = '.',
+                       sample_name = 'Input sample', plotter = c(TRUE,TRUE,TRUE), fig.prefix = '.',
                        r_vec = NULL, spatstat_statistics = 'ALL', 
-                       reference = 'Tumors',plotOnly=NULL,image_shape = 'concave', ...) {
+                       reference = 'Tumors',plotOnly=FALSE,image_shape = 'concave', ...) {2
   # Create table with the right spatial dimensions such as described by the component file
-  Intable = purrr::map_df(seg_path, read_cell_seg_data, pixels_per_micron = "auto",remove_units = FALSE)
-  
+    Intable = purrr::map_df(seg_path, read_cell_seg_data, pixels_per_micron = "auto",remove_units = FALSE)
   # replace empty phenotype with "Other"
   Intable$Phenotype[Intable$Phenotype == ""] = "Other"
   
@@ -94,28 +93,7 @@ do_analyse <- function(seg_path, PhenoOrder = NULL, ColsOrder = NULL,
     stop("One or more spatial statistics in parameter 'spatstat_statistics' are not correctly defined")
   }
   
-  
-  
-  #### normal statistics: Median and Median Absolute Deviation ####
-  
-  
-  # Create Intable with nearest distances for each phenotype, here after the substitution of "" to "Other" and Simplyfying the Phenotypes
-  Intable_with_distance = Intable %>%
-      do(bind_cols(., find_nearest_distance(.)))
-  cat("dimensions of the data with distances is ", dim(Intable_with_distance)[1], " times ", dim(Intable_with_distance)[2], fill = TRUE)
-  
-  # generate pairwise distance matrix for csd for use in getMAD
-  pairwise_distance = distance_matrix(csd)
-  
-  # call getMAD function
-  output = getMAD(Intable_with_distance, pairwise_distance, pheno_vector, missing_in_data, reference=reference)
-  MED_min = output[[1]]
-  MED = output[[2]]
-  MAD_min = output[[3]]
-  MAD = output[[4]]
-  ratio_distances = output[[5]]
-  
-  
+
   #### Creation Poisson Point Process and quadratcounts figures ####
     
     if(image_shape == 'circle'){
@@ -146,7 +124,43 @@ do_analyse <- function(seg_path, PhenoOrder = NULL, ColsOrder = NULL,
    }
     unitname(csd_ppp) = list("micron", "microns", 1)
     
-    
+    if(plotOnly == TRUE){
+        png(filename = paste0(file.path(output_dir, sample_name),".png"), width = 600, height = 480)
+        par(mar=rep(0.5, 4))
+        plot(csd_ppp, cols = unlist(colors_phenotype[levels(csd_ppp$marks)]), xlab = "", ylab = "", main = "", pch = 20)
+        title(paste("Location of cells and their phenotype\n in sample", sample_name), line = -3)
+        dev.off()
+    }else{
+
+
+
+
+  
+  
+  #### normal statistics: Median and Median Absolute Deviation ####
+  
+  
+  # Create Intable with nearest distances for each phenotype, here after the substitution of "" to "Other" and Simplyfying the Phenotypes
+  Intable_with_distance = Intable %>%
+      do(bind_cols(., find_nearest_distance(.)))
+  cat("dimensions of the data with distances is ", dim(Intable_with_distance)[1], " times ", dim(Intable_with_distance)[2], fill = TRUE)
+  
+  # generate pairwise distance matrix for csd for use in getMAD
+  pairwise_distance = distance_matrix(csd)
+  rownames(pairwise_distance) <- Intable_with_distance$`Cell ID`
+  colnames(pairwise_distance) <- Intable_with_distance$`Cell ID`
+        
+  
+  # call getMAD function
+  output = getMAD(Intable_with_distance, pairwise_distance, pheno_vector, missing_in_data, reference=reference)
+  MED_min = output[[1]]
+  MED = output[[2]]
+  MAD_min = output[[3]]
+  MAD = output[[4]]
+  ratio_distances = output[[5]]
+  
+  
+        
     if (isTRUE(plotter[[1]])) {
         
         png(filename = paste0(file.path(output_dir, sample_name),".png"), width = 600, height = 480)
@@ -155,7 +169,7 @@ do_analyse <- function(seg_path, PhenoOrder = NULL, ColsOrder = NULL,
         title(paste("Location of cells and their phenotype\n in sample", sample_name), line = -3)
         dev.off()
     }
-    if(plotOnly != TRUE){
+   
   ##### normal statistics: Counts and Density ####
   
   counts_sample = summary(csd_ppp)$marks[['frequency']]
@@ -217,13 +231,25 @@ do_analyse <- function(seg_path, PhenoOrder = NULL, ColsOrder = NULL,
     
     for (counter2 in sym_matrix_sequence){
       phenotype2 = pheno_vector[counter2]
-      
+      print(paste0(phenotype1,'-',phenotype2))
       # split ppp on pairwise phenotypes
       splitted = csd_ppp[(marks(csd_ppp) == phenotype1) | (marks(csd_ppp) == phenotype2)] 
-      
       if (phenotype1 == phenotype2){
-        # single phenotype Chi-squared quadratcount statistic and normalizing by the counts of corresponding phenotype
-        quadrattest = quadrat.test(splitted) 
+          if(image_shape %in% c('convex','concave')){
+              X <- splitted
+              W <- as.owin(X)
+              xr <- W$xrange
+              yr <- W$yrange
+              b <- rectquadrat.breaks(xr, yr, 5, 5, xbreaks=NULL, ybreaks=NULL)        
+                                        # fix rounding of edges
+              b$xbreaks[1] <- floor(min(b$xbreaks))
+              b$xbreaks[length(b$xbreaks)] <- ceiling(max(b$xbreaks))
+              b$ybreaks[1] <- floor(min(b$ybreaks))
+              b$ybreaks[length(b$xbreaks)] <- ceiling(max(b$ybreaks))
+              quadrattest = quadrat.test(splitted,xbreaks=floor(b$xbreaks),ybreaks=b$ybreaks)
+          }else{
+              quadrattest = quadrat.test(splitted)
+          }
         quadratcount_X2statistic[[phenotype1]] = quadrattest$statistic[['X2']]
         quadratcount_X2statistic_normed[[phenotype1]] = quadrattest$statistic[['X2']]/counts_sample[[phenotype1]]
         
@@ -297,7 +323,7 @@ do_analyse <- function(seg_path, PhenoOrder = NULL, ColsOrder = NULL,
   #### compute inbuild statistics with statistic-dependent correction-method ####
   if(!is.null(spatstat_statistics)){
     for (spatstat_statistic in spatstat_statistics){
-      
+
       cat('computing', spatstat_statistic, 'of alltypes', fill = TRUE)
       
       if (spatstat_statistic %in% list("K","L","Kdot","Ldot","pcf")){
@@ -361,43 +387,44 @@ do_analyse <- function(seg_path, PhenoOrder = NULL, ColsOrder = NULL,
     }
 }
 
+
 #### function normal statistic: Median and Median Absolute Deviation ####
 getMAD <- function(data_with_distance, pairwise_distances, pheno_vector, missing_in_data,
                    reference = "Tumors" # used for relative distance calculation
                    ){
+
   
-  phenos = c(pheno_vector, missing_in_data)
-  # phenos = pheno_vector
-  dim_square = length(phenos)
- 
-  MED = matrix(NA , nrow = dim_square, ncol = dim_square)
-  colnames(MED) = phenos
-  rownames(MED) = phenos
-  
-  MAD = MED
-  MED_min = MED
-  MAD_min = MED
-  
-  for (from in pheno_vector){
-    filter_from = data_with_distance %>% filter(`Phenotype` == from)
-    IDs_from = filter_from$`Cell ID`
+    phenos = c(pheno_vector, missing_in_data)
+                                        # phenos = pheno_vector
+    dim_square = length(phenos)
     
-    for (to in pheno_vector){
-      
-      distances_min = filter_from[[paste("Distance to",to)]]
-      MED_min[paste(from), paste(to)] = median(distances_min)
-      MAD_min[paste(from), paste(to)] = mad(distances_min)
-      
-      filter_to = data_with_distance %>% filter(`Phenotype` == to)
-      IDs_to = filter_to$`Cell ID`
-      
-      pairwise_to_from = pairwise_distances[IDs_from,IDs_to]
-      
-      MED[paste(from), paste(to)] = median(pairwise_to_from[pairwise_to_from > 0]) # median(pairwise_to_from[pairwise_to_from > 0]
-      MAD[paste(from), paste(to)] = mad(pairwise_to_from[pairwise_to_from > 0])
+    MED = matrix(NA , nrow = dim_square, ncol = dim_square)
+    colnames(MED) = phenos
+    rownames(MED) = phenos
+    
+    MAD = MED
+    MED_min = MED
+    MAD_min = MED
+    
+    for (from in pheno_vector){
+        filter_from = data_with_distance %>% filter(`Phenotype` == from)
+        IDs_from = filter_from$`Cell ID`
+        for (to in pheno_vector){
+
+            
+            distances_min = filter_from[[paste("Distance to",to)]]
+            MED_min[paste(from), paste(to)] = median(distances_min)
+            MAD_min[paste(from), paste(to)] = mad(distances_min)
+            
+            filter_to = data_with_distance %>% filter(`Phenotype` == to)
+            IDs_to = filter_to$`Cell ID`
+            pairwise_to_from = pairwise_distances[IDs_from,IDs_to]
+            
+            MED[paste(from), paste(to)] = median(pairwise_to_from[pairwise_to_from > 0]) # median(pairwise_to_from[pairwise_to_from > 0]
+            MAD[paste(from), paste(to)] = mad(pairwise_to_from[pairwise_to_from > 0])
+        }
     }
-  }
-  
+    
 
   ratio_distances = NULL 
   combination = combn(setdiff(pheno_vector, reference), 2)

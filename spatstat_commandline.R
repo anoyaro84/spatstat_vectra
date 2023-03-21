@@ -11,9 +11,16 @@ if (exists('snakemake')) { # if the script is used by snakemake
     #colors_absolut = snakemake@params[["colors"]]
     path_script = 'scripts/spatstat_vectra'
     path_figure = snakemake@params[["fig_prefix"]]
-    plotOnly <- snakemake@params[["plotOnly"]]
     ref_ctype = strsplit(snakemake@params[["ref_ctype"]], split=',')[[1]]
 }else {
+    infile = 'data/vectra/processed/Lympho/TVU10-6725 VII-D/1/TVU10-6725 VII-D_cell_seg_data.txt'
+    r_vec = c(5,10,25,50,75,100,150,200,250,500)
+    pheno_vector_absolut = c('T cell Other','T cell Other (memory)','Cytotoxic T cell','Cytotoxic T cell (memory)','T helper cell','T helper cell (memory)','Regulatory T cell','Regulatory T cell (memory)','B cell','Tumor cell','DAPI','Unknown cell')
+    color_absolut = c('#800000','#e6194B','#9A6324','#f58231','#ffe119','#fffac8','#3cb44b','#aaffc3','#000075','#000000','#911eb4','#a9a9a9')
+    ref_ctype = 'Tumuor cell'
+    
+
+    
     args = commandArgs(trailingOnly=TRUE)
     infile = args[1]
     outRDS = args[2]
@@ -26,17 +33,24 @@ if (exists('snakemake')) { # if the script is used by snakemake
 
 
     
-    #infile <- 'data/vectra/processed/Lympho/TVU07-18235 I-C_cell_seg_data.txt'
-    #r_vec <- as.numeric(strsplit('5,10,25,50,75,100,150,200,250,500', split=',')[[1]])
-    #pheno_vector_absolut <- c('T cell Other','T cell Other (memory)','Cytotoxic T cell','Cytotoxic T cell (memory)','T helper cell','T helper cell (memory)','Regulatory T cell','Regulatory T cell (memory)','B cell','Tumor cell','DAPI','Unknown cell')
-    #colors_absolut <- c('#800000','#e6194B','#9A6324','#f58231','#ffe119','#fffac8','#3cb44b','#aaffc3','#000075','#000000','#911eb4','#a9a9a9')
-    #ref_ctype <- 'Tumor cell'
+    infile <- 'data/vectra/processed/Lympho/TVU05-17698 IV-K/1/TVU05-17698 IV-K_cell_seg_data.txt'
+    r_vec <- as.numeric(strsplit('5,10,25,50,75,100,150,200,250,500', split=',')[[1]])
+    pheno_vector_absolut <- c('T cell Other','T cell Other (memory)','Cytotoxic T cell','Cytotoxic T cell (memory)','T helper cell','T helper cell (memory)','Regulatory T cell','Regulatory T cell (memory)','B cell','Tumor cell','DAPI','Unknown cell')
+    colors_absolut <- c('#800000','#e6194B','#9A6324','#f58231','#ffe119','#fffac8','#3cb44b','#aaffc3','#000075','#000000','#911eb4','#a9a9a9')
+    path_script <- 'scripts/spatstat_vectra/' 
+    ref_ctype <- 'Tumor cell'
     
 }
 
 if (is.character(pheno_vector_absolut)) {
     pheno_vector_absolut = strsplit(pheno_vector_absolut, split=',')[[1]]
 }
+
+if(is.null(snakemake@params[["plotOnly"]])){
+plotOnly <- FALSE
+}
+
+
 
 print(r_vec)
 print(pheno_vector_absolut)
@@ -57,10 +71,26 @@ samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(infile, '/')[[1]],1))
 # set seed for reproducing
 set.seed(0)
 
+seg_path = infile
+PhenoOrder=pheno_vector_absolut
+ColsOrder=colors_absolut
+XposCol = 'Cell X Position'
+YposCol = 'Cell Y Position'
+PhenoCol = 'Phenotype'
+sample_name = samplename
+plotter = c(FALSE, FALSE,FALSE)
+r_vec = r_vec
+spatstat_statistics = 'ALL'
+reference=ref_ctype
+plotOnly=FALSE
 # perform analysis on segmentation file
 output = do_analyse(seg_path = infile, PhenoOrder=pheno_vector_absolut, ColsOrder=colors_absolut, 
 			XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype',
-			sample_name = samplename, plotter = c(TRUE, TRUE,TRUE), fig.prefix = path_figure,
+                    sample_name = samplename,
+                    #plotter = c(TRUE, TRUE,TRUE),
+                    plotter = c(TRUE, FALSE,TRUE),
+                    
+                    fig.prefix = path_figure,
 			r_vec = r_vec, spatstat_statistics = 'ALL', reference=ref_ctype,plotOnly=plotOnly)
 
 print(output)
