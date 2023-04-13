@@ -7,6 +7,9 @@ output:
 ---
 
 
+## Loading packages
+
+
 ```{r load_package}
 library(cowplot)
 library(ggplot2)
@@ -36,34 +39,22 @@ plot_function <- function(csd, ctypes) {
 
 ```
 
+## Example images (5 images)
+
 
 ```{r example_images, fig.width=12, fig.height=6}
 
 images = c(
-    'exported_mIF/HO105-003_[11564,35679]_cell_seg_data.txt'
-#    'exported_mIF/HO105-003_[11564,35679]_cell_seg_data.txt',
-#    'exported_mIF/HO105-180_[15869,40356]_cell_seg_data.txt'
-#    'exported_mIF/HO105-126_[15975,49075]_cell_seg_data.txt',
-#    'exported_mIF/HO105-025_[9621,46812]_cell_seg_data.txt',
-#    'exported_mIF/HO105-036_[10536,42112]_cell_seg_data.txt',
-#    'exported_mIF/HO105-182_[8076,47954]_cell_seg_data.txt',
-#    'exported_mIF/HO105-010_[15489,46493]_cell_seg_data.txt',
-#    'exported_mIF/HO105-020_[9758,38701]_cell_seg_data.txt',
-#    'exported_mIF/HO105-080_[9000,38682]_cell_seg_data.txt',
-#    'exported_mIF/HO105-010_[14712,46842]_cell_seg_data.txt',
-#    'exported_mIF/HO105-020_[10157,38113]_cell_seg_data.txt'
+    'exported_mIF/HO105-003_[11564,35679]_cell_seg_data.txt',
+    'exported_mIF/HO105-003_[11564,35679]_cell_seg_data.txt',
+    'exported_mIF/HO105-025_[9621,46812]_cell_seg_data.txt',
+    'exported_mIF/HO105-182_[8076,47954]_cell_seg_data.txt',
+    'exported_mIF/HO105-020_[9758,38701]_cell_seg_data.txt'
 )
 
 ctypepairs = list(
     c('CD3+CD8-PD1-', 'CD8+CD8-PD1+', 'CD3+CD8+PD1-', 'CD3+CD8+PD1+'),
     c('CD163+PDL1-', 'CD163+PDL1+', 'CD3+CD8+PD1-', 'CD3+CD8+PD1+'),
-    c('CD163+PDL1-', 'CD163+PDL1+', 'CD3+CD8+PD1-'),
-    c('CD3+CD8-PD1-', 'CD3+CD8-PD1+', 'PAX5+PDL1-'),
-    c('CD163+PDL1-', 'CD163+PDL1+'),
-    c('PAX5+PDL1+', 'CD163+PDL1+'),
-    c('CD163+PDL1-', 'CD163+PDL1+'),
-    c('CD163+PDL1-', 'CD163+PDL1+'),
-    c('CD163+PDL1-', 'CD163+PDL1+'),
     c('CD163+PDL1-', 'CD163+PDL1+'),
     c('CD163+PDL1-', 'CD163+PDL1+'),
     c('CD163+PDL1-', 'CD163+PDL1+')
@@ -135,26 +126,24 @@ for (i in 1:length(images)) {
 
 ```
 
+## Visualization of the images
+
 
 ```{r, eval=T, cache=T, warning=F, message=F}
 
 phenotype_complete = c("CD163+PDL1-","CD163+PDL1+",
                        "CD3+CD8-PD1-", "CD3+CD8-PD1+", "CD3+CD8+PD1-", "CD3+CD8+PD1+",
-                       "Other","Other PDL1+",
-                       "PAX5+PDL1-", "PAX5+PDL1+",
-                       "")
+                       "Other","Other PDL1+", "PAX5+PDL1-", "PAX5+PDL1+", "")
 
 color_complete = list("magenta", "brown",
                    "red", "blue", "green", "yellow",
-                   "gray", "pink",
-                   "orange", "cyan",
-                   "gray")
+                   "gray", "pink", "orange", "cyan", "gray")
 names(color_complete) = phenotype_complete
 
 fig.prefix.complete = './complete'
 selected_spatstat_statistics = c('K', 'L') 
 # can be any subset of ('K', 'Kdot', 'L', 'Ldot', 'F', 'J', 'G', 'Gdot', 'pcf')
-r_vec = c(10)
+r_vec = c(5, 10, 25, 50, 75, 100)
 
 plotter_sample = T
 plotter_quadrat = T
@@ -175,387 +164,134 @@ for (file in images){
 }
 
 ```
-The script `do_analyse` measured multiple statistics (`K` and `L` statistics were chosen in the example above) for the given image (`seg_path`).
+
+The script `do_analyse` measures multiple statistics (`K` and `L` statistics were chosen in the example above) for the given image (`seg_path`).
 Apart from the statistics itself, it will save images at the location specified by `fig.prefix`. 
-One example image (K statistics) of all pairs of cell types considered (defined by `PhenoOrder`) is shown below. Note that `+` and `-` signs are converted to `T` and `F` for computation reasons. The red line and gray shadow indicate theoretical statistics when the pair of cell types have no geometric association. The solid black line represents the actual statistic.
+One example image (K statistics) of all pairs of cell types considered (defined by `PhenoOrder`) is shown below. Note that `+` and `-` signs are converted to `T` and `F`. 
+The red line and gray shadow indicate theoretical statistics when the pair of cell types have no geometric association. The solid black line represents the actual statistic.
 
 ![Example image](./complete/HO105-003_[11564,35679]/HO105-003_[11564,35679]_statistic_K.png)
 
-```{r, eval=F}
 
-phenotype_simple = list(Macrophage = c("CD163+PDL1-","CD163+PDL1+"),
-                      Tcells = c("CD3+CD8-PD1-", "CD3+CD8-PD1+", "CD3+CD8+PD1-", "CD3+CD8+PD1+"),
-                      Tumors = c("PAX5+PDL1-", "PAX5+PDL1+"),
-                      Others = c("Other", "Other PDL1+")
-                      )
+## Creating a feature matrix
 
-color_simple = c(Macrophage = "magenta", Tcells = "red", Tumors = "orange", Others = "gray")
+Feature matrix can be created with `feature_extract` function.
 
-fig.prefix.simple = './simple'
 
-outputs_simple = list()
-for (file in images){
-	cat('processing', file)
-  
-  samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(file, '/')[[1]],1))
-  outputs_simple[[samplename]] = do_analyse(seg_path = file, PhenoOrder = phenotype_simple, 
-                                          ColsOrder = color_complete, XposCol = 'Cell X Position', 
-                                          YposCol = 'Cell Y Position', PhenoCol = 'Phenotype',
-                      sample_name = samplename, plotter = plotter, fig.prefix = fig.prefix.simple,
-                      r_vec = r_vec, spatstat_statistics = selected_spatstat_statistics)
+```{r feature}
+
+mat = feature_extract(outputs_complete)
+df = data.frame(feature = colnames(mat), stringsAsFactors=F)
+
+# some features are excluded in the study
+keyword_exclude = c('counts_sample', 'counts_lognormed', 'counts_pairwise', 'counts_pairwise', 
+        'density_lognormed', 'density_lognormed', 'Ldot_', 'Kdot_', 'pcf_')
+
+df$Use = rep(TRUE, ncol(mat))
+
+for (key in keyword_exclude) {
+    df$Use[grep(key, colnames(mat))] = FALSE
 }
 
+# unnormalized spatial features were also excluded
+ind_unnormalized = setdiff(grep('radius', df$feature), grep('Normalized', df$feature))
+df[ind_unnormalized, 'Use'] = FALSE
 
-```
 
 
-```{r HO105_extreme,fig.width=8, fig.height=8, eval=F} 
-source('spatstat_vectra.R')
-# source('C:/Users/erikb/Documents/Studie/Thesis - Local/spatstat_vectra_backup_2020-05-04/spatstat_vectra 2020-07-21.R')
-extreme = file.path(base_path, c(
-		'HO105-194_[16067,37856]_cell_seg_data.txt', # PD-L1 positive cluster + Tumor cluster
-		'HO105-194_[15564,37856]_cell_seg_data.txt', # PD-L1 positive cluster + Tumor cluster
-		'HO105-194_[16029,38205]_cell_seg_data.txt' # not clustered
-	))
-D = file.path(base_path, c(
-    'HO105-006_[9554,40992]_cell_seg_data.txt',  # complete and simple: no component (not in marits file) 1
-    'HO105-006_[10041,41957]_cell_seg_data.txt', # complete and simple: no component (not in marits file) 2
-		'HO105-140_[16281,41985]_cell_seg_data.txt', # complete: Fest spacing  3 inside alltypes(..,fun=J) small counts 5,1
-		'HO105-083_[20512,33844]_cell_seg_data.txt', # simple: (maybe counts) 4 inside alltypes no Tcells solved
-		'HO105-083_[18166,32820]_cell_seg_data.txt', # simple: (maybe counts) 5 inside alltypes no Tcells solved
-		'HO105-097_[9517,43652]_cell_seg_data.txt',  # simple: (maybe counts) 6 inside alltypes no Tcells solved
-		'HO105-097_[8938,43999]_cell_seg_data.txt',  # simple: (maybe counts) 7 inside alltypes no Tcells solved
-		'HO105-097_[11295,45384]_cell_seg_data.txt', # simple: (maybe counts) 8 inside alltypes no Tcells solved
-		'HO105-121_[8016,47627]_cell_seg_data.txt',  # complete: Fest spacing 9 inside alltypes(..,fun=J) small counts 5,2
-		'HO105-083_[20684,34346]_cell_seg_data.txt', # simple: (maybe counts) 10 inside alltypes no Tcells solved
-		'HO105-083_[14332,34366]_cell_seg_data.txt', # simple: (maybe counts) 11 inside alltypes no Tcells solved
-		'HO105-083_[14941,33993]_cell_seg_data.txt', # simple: (maybe counts) 12 inside alltypes no Tcells solved
-		'HO105-083_[18456,34691]_cell_seg_data.txt', # simple: (maybe counts) 13 inside alltypes no Tcells solved
-		'HO105-083_[15677,36542]_cell_seg_data.txt', # simple: (maybe counts) 14 inside alltypes no Tcells solved
-		'HO105-083_[15726,34331]_cell_seg_data.txt', # simple: (maybe counts) 15 inside alltypes no Tcells solved
-		'HO105-095_[15101,39877]_cell_seg_data.txt', # complete: Fest spacing 16 inside alltypes(..,fun=J) small counts 5,1 maybe area is to thin?
-		'HO105-083_[16066,33773]_cell_seg_data.txt', # simple: (maybe counts) 17 inside alltypes no Tcells solved
-		'HO105-083_[16367,35783]_cell_seg_data.txt'  # simple: (maybe counts) 18 inside alltypes no Tcells solved
-	))
-# extreme = D
-# Plot variables
+# feature annotation
 
-plotter_sample = T
-plotter_quadrat = T
-plotter_alltypes = T
+df$celltype = unlist(lapply(df$feature, function(x) tail(strsplit(x, '_', fixed=T)[[1]],1)))
+df$celltype = unlist(lapply(df$celltype,
+                    function(x) paste0(sort(strsplit(x, '/')[[1]]), collapse='/')
+                    ))
 
-plotter = list(plotter_sample, plotter_quadrat, plotter_alltypes)
+feat_key = c(count='counts_[a-z]+', density='density_', Xstat='X2stat_[a-z]', MedianDistance='MED|distance_ratio',
+        RelDistance = 'Relative_distance', MADDistance='MAD', Fstat='F_radius', Gstat='G_radius|Gdot_radius', 
+        Kstat='K_radius|Kdot_radius', Lstat='L_radius|Ldot_radius', PCFstat='pcf_radius')
 
-# Select spatial statistics, or NULL then all inbuild spatial statistics are selected
-selected_spatstat_statistics = list('K', "L") # 'ALL', NULL, list('Gdot', 'K') list("G","F", "J","Gdot", "Jdot", "K", "L", "pcf", "Kdot", "Ldot")
 
-# debug
+ctype_key = grep('counts_sample', df$feature, value=T)
+ctype_key = unlist(lapply(ctype_key, function(x) tail(strsplit(x, '_', fixed=T)[[1]], 1)))
 
-extreme = file.path(base_path,'HO105-083_[16577,32382]_cell_seg_data.txt') # Ma= 95, Ot= 129, Tc= 1, Tu= 732
-extreme = file.path(base_path,'HO105-097_[9517,43652]_cell_seg_data.txt') # Ma= 37, Ot= 198, Tc= 0, Tu= 37
-extreme = file.path(base_path,'HO105-006_[13675,45799]_cell_seg_data.txt') # Ma= 12, Ot= 386, Tc= 2, Tu= 720
-extreme = file.path(base_path,'HO105-060_[19134,52452]_cell_seg_data.txt') # Ma= 21, Ot= 404, Tc= 3, Tu= 847
-# extreme = file.path(base_path,'HO105-062_[11908,48533]_cell_seg_data.txt') # Ma= 7, Ot= 224, Tc= 4, Tu= 1360
-# extreme = file.path(base_path,'HO105-101_[12806,43611]_cell_seg_data.txt') # Ma= 63, Ot= 405, Tc= 5, Tu= 1264
-extreme = file.path(base_path,'HO105-083_[14332,34366]_cell_seg_data.txt') # 541 NA's  Ma =55 Ot=146 Tc=0 Tu=706
-
-# names(features_raw[,'counts_sample_Tcells'][features_raw[,'counts_sample_Tcells'] == 0])
-# View( Tc0 <-features_raw[names(features_raw[,'counts_sample_Tcells'][features_raw[,'counts_sample_Tcells'] == 0]),]); print(dim(Tc0));unique(colSums(is.na(Tc0))); 15
-# names(features_raw[,'counts_sample_Tcells'][features_raw[,'counts_sample_Tumors'] == 0])
-
-# extreme = c(extreme[3],D[8])
-
-# extreme = file.path(base_path, paste0(c(threes_names[1]),'_cell_seg_data.txt'))
-
-outputs_auto = list()
-for (file in extreme){
-	cat('processing', file)
-  
-  samplename = gsub('_cell_seg_data.txt', '', tail(strsplit(file, '/')[[1]],1))
-	outputs_auto[[samplename]] = do_analyse(seg_path = file, PhenoOrder = phenotype_simple, ColsOrder = color_simple,
-                      XposCol = 'Cell X Position', YposCol = 'Cell Y Position', PhenoCol = 'Phenotype',
-                      sample_name = samplename, plotter = plotter, fig.prefix = fig.prefix.simple,
-                      r_vec = r_vec, spatstat_statistics = selected_spatstat_statistics)
+df$feat_group = NA
+for (i in 1:length(feat_key)) {
+    df$feat_group[grep(feat_key[i], df$feature)] = names(feat_key)[i] 
+}
+for (i in 1:length(ctype_key)) {
+    df[[ctype_key[i]]] = FALSE
+    df[[ctype_key[i]]][grep(ctype_key[i], df$feature, fixed=T)] = TRUE
+    for (overlap in setdiff(grep(ctype_key[i], ctype_key, value=T, fixed=T), ctype_key[i])) {
+        df[[ctype_key[i]]][grep(overlap, df$feature, fixed=T)] = FALSE
+    }
 }
 
-# saveRDS(outputs_auto, file = 'feature_matrix_output.RDS')
-M = feature_extract(outputs = outputs_auto)
-# write.csv(x = M,file = file.path(fig.prefix.simple, 'feature_matrix.csv'))
-```
-
-
-```{r marit HO105 image check  all via import, fig.width=8, fig.height=8, eval=F}
-source('spatstat_vectra.R')
-library('readxl')
-
-
-#### Preprocessing ####
-# Define path for all data
-base_path <- '../Exported data tables/' # Working for Yongsoo
-# base_path <- 'C:/Users/erikb/Documents/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping' # working for Erik
-base_path = path.expand("~/Studie/Thesis - Local/Data Marit voor Erik Bosch/Erik Bosch/Data complete phenotyping")
-
-# define path for selected images by Marit
-image_check_path = NULL # working for Yongsoo (CHANGE)
-image_check_path <- 'C:/Users/erikb/Documents/Studie/Thesis - Local/spatstat_vectra/HO105 image check.xlsx' # working for Erik
-image_check_path <- path.expand('~/Studie/Thesis - Local/spatstat_vectra/HO105 tumor_border annotation.xlsx') # working for Erik
-
-
-# all_files_x_ = rownames(base_path, pattern =  'HO105-',full.names = TRUE)
-# names_with_x_ = list.files(base_path, pattern =  'HO105-[0-9]+_[0-9]_',full.names = TRUE)
-# 
-# if (length(names_with_x_)>0){
-#     new_names = str_replace_all(all_files_x_, pattern = '_[0-9]_', replacement = '\\_')
-#     warning(paste('file names have been renamed in the current directory',getwd()))
-#     rename_log = file.rename(all_files_x_, new_names)
-# }
-
-
-
-
-
-#### Read file for selected images by Marit ####
-HO105_image_check <- read_excel(image_check_path)
-HOnrs_unfil = HO105_image_check$`HO105 nr`
-
-tumor_images_data_unfil = HO105_image_check$`Tumor images`
-# get the MSI's through regex finding: open bracket->MSI numbers->comma->MSI numbers-> closed bracket
-tumor_images_unfil = str_extract_all(tumor_images_data_unfil,'\\[[0-9]+,[0-9]+\\]')
-# create filter to check for non empty content
-non_empty = !sapply(tumor_images_unfil,is_empty)
-# create filtered tumor_images and HOnrs
-tumor_images = tumor_images_unfil[non_empty]
-HOnrs = HOnrs_unfil[non_empty]
-names(tumor_images) = HOnrs
-# create string with paths to segmentation data and component data to analyse
-sample_names_marit = lapply(seq_along(HOnrs),function(x) paste0(names(tumor_images)[x],'_',unlist(tumor_images[HOnrs][x])))
-sample_names_marit_str = unlist(sample_names_marit)
-length(sample_names_marit_str)
-
-
-border_images_data_unfil = HO105_image_check$`Border images`
-# get the MSI's through regex finding: open closed bracket->MSI numbers->comma->MSI numbers-> closed closed bracket
-border_images_unfil = str_extract_all(border_images_data_unfil,'\\[[0-9]+,[0-9]+\\]')
-# create filter to check for non empty content
-non_empty_border = !sapply(border_images_unfil,is_empty)
-# create filtered tumor_images and HOnrs
-border_images = border_images_unfil[non_empty_border]
-HOnrs_border = HOnrs_unfil[non_empty_border]
-names(border_images) = HOnrs_border
-
-# #### check if the component data and segmentation data are one to one ####
-# # # find all files of HO105
-# # all_files = list.files(base_path, pattern =  'HO105-')
-# 
-# ## find all available component data of HO105
-# available_comp_tif = list.files(base_path, pattern = '_component_data.tif')
-# # find the sample names of all available component data
-# available_comp = lapply(available_comp_tif, function(x) gsub('_component_data.tif','',x))
-# available_comp_str = unlist(available_comp)
-# length(available_comp_str)
-# 
-# ## find all available segmentation data of HO105
-# available_seg_txt = list.files(base_path, pattern = '_cell_seg_data.txt')
-# # find the sample names of the all available segmentation data
-# available_seg = lapply(available_seg_txt, function(x) gsub('_cell_seg_data.txt','',x))
-# available_seg_str = unlist(available_seg)
-# length(available_seg_str)
-
-
-# # take intersection to retrieve the matching names with the data from Marits file
-# matching_names_marit = intersect(sample_names_marit_str,available_comp_str)
-# length(matching_names_marit)
-# 
-# # take the difference to retrieve the sample names of the missing component data
-# diff_available_comp = setdiff(sample_names_marit_str,available_comp_str)
-# length(diff_available_comp)
-# 
-# #take set difference of names of actual available components and names of components of 
-# diff_available_seg = setdiff(sample_names_marit_str,available_seg_str)
-# length(diff_available_seg)
-
-
-
+for (radius in c(5,10, 25, 50, 75, 100, 150, 200, 250, 500)) {
+    ind = grep(paste0('radius ', as.character(radius), '_'), df$feature)
+    df$feat_group[ind] = paste0(df$feat_group[ind], ', r=', as.character(radius))
+}
+#
 
 ```
 
-```{r clinical vs prediction data 22nd Jun, eval=F}
-source('spatstat_vectra.R')
-
-# import simplified matrix
-
-feature_matrix_simple_22 = readRDS(path.expand('~/Studie/Thesis - Local/Extracted_Features_22ndJun.RDS'))
-
-cols_without_J = str_subset(colnames(feature_matrix_simple_22),'J_radius', negate = TRUE)
-cols_without_Jdot = str_subset(colnames(feature_matrix_simple_22),'Jdot_radius', negate = TRUE)
-cols_without_J_Total = intersect(cols_without_J, cols_without_Jdot)
-feature_matrix_simple_22_without_J = feature_matrix_simple_22[,cols_without_J_Total]
-
-# View(rowSums((is.na(feature_matrix_simple_22_without_J))))
-# View(colSums((is.na(feature_matrix_simple_22_without_J)))) # 22 = 14 + 8 times MED_min_Tcells_Tcells == NA
-# View(colSums((feature_matrix_simple_22_without_J ==0))) # 14 times 0 Tcells
-# View(colSums((feature_matrix_simple_22_without_J ==1))) # 8 times 1 Tcell
-
-NAs_per_sample = rowSums((is.na(feature_matrix_simple_22_without_J)))
-# View(feature_matrix_simple_22_without_J[rowSums((is.na(feature_matrix_simple_22_without_J)))>0,])
-df_and_NAs = cbind(NAs_per_sample,feature_matrix_simple_22_without_J)
-View(df_and_NAs)
-
-# 541 NAs is when a phenotype count has 0
-# 26 NAs is when a phenotype count has 1
-# 6 and 3 NAs is when a phenotype as extensively many counts.
-
-# samples with 3 NA's have loooooooots of TUmors and results in a Fstatistic of NA for large radi: 30,40,50
-threes = df_and_NAs[threes_names <- c('HO105-033_[20154,47207]','HO105-183_[10192,36437]', 'HO105-183_[11016,38792]', 'HO105-183_[15933,32458]', 'HO105-183_[16366,40912]', 'HO105-183_[18063,33897]',  'HO105-183_[9034,45388]'),] # test for F30,40,50 ook normalized geeft daardoor 0
-# samples with 6 NA's have
-sixes = df_and_NAs[sixes_names <- 'HO105-061_[11807,41972]',] # test for F30,40,50 ook normalized geeft daardoor 0
-
-# samples with 26 NA's have a count of 1 for a phenotype
-stop()
-#### renaming rownames in simplified matrix with '_1_', '_2_', '_3_' and '_4_' (replace with '_') ####
-all_rownames = rownames(feature_matrix_simple_22)
-all_rownames = str_replace_all(all_rownames, pattern = '\\_[0-9]\\_', replacement = '\\_')
-
-rownames(feature_matrix_simple_22) = all_rownames
+## Feature overview
 
 
-# match_indices = match(sample_names_marit_str,all_rownames)
-# feature_matrix_simple_22_tumor = feature_matrix_simple_22[match_indices,]
-# 
-# saveRDS(feature_matrix_simple_22_tumor, file = 'feature_matrix_simple_22_tumor.RDS')
-# stop('joe')
+```{r}
+
+color = c(
+          "NonSpatial" = "#72ac5c",
+          "GlobalSpatial" = "#7f64b9",
+          "LocalSpatial" = "#bb7438",
+          "Poisson, r_5" = "#c2215f",
+          "Poisson, r_10" = "#c76f90",
+          "Poisson, r_25" = "#da9eb4",
+          "Poisson, r_50" = "#e2b2c3",
+          "Poisson, r_75" = "#f2dee5",
+          "Poisson, r_100" = "#f7ecf0",
+          "Poisson, local" = "#c2215f",
+          "Poisson, global" = "#e2b2c3"
+          )
 
 
+freq = data.frame(table(df[df$Use, ]$feat_group))
 
-mat_simple_allpatients_complete_cases_mean = statisticPerPatient(feature_matrix_simple_22, statistic = 'mean', na.handler = 'complete_cases')
-# apply(feature_matrix_simple_22,1,function(x) sum(is.na(x))) if all bigger than 0, then every sample has NA's in them, so no complete cases exist
-mat_simple_allpatients_ignore_na_mean = statisticPerPatient(feature_matrix_simple_22, statistic = 'mean', na.handler = 'ignore_na')
-# apply(mat_simple_allpatients_ignore_na_mean,1,function(x) sum(is.na(x))) NA's are not a problem in this setting
+ftypes = list(
+    NonSpatial=c("count", "density"),
+    GlobalSpatial=c("MAD_Distance", "Median_Distance", 'Xstat'),
+    LocalSpatial=c("MAD_Min_Distance", "Median_Min_Distance", "RelDistance")
+    )
+radius = list(local=c(5, 10, 25), global=c(50, 75, 100)) 
 
-mat_simple_allpatients_complete_cases_median = statisticPerPatient(feature_matrix_simple_22, statistic = 'median', na.handler = 'complete_cases')
-# apply(feature_matrix_simple_22,1,function(x) sum(is.na(x))) if all bigger than 0, then every sample has NA's in them, so no complete cases exist
-mat_simple_allpatients_ignore_na_median = statisticPerPatient(feature_matrix_simple_22, statistic = 'median', na.handler = 'ignore_na') 
-
-
-
-#### finding the the widths for significance band of each feature per patient
-
-# feature_matrix_simple_22 = M
-uni_stats = unique(str_subset(colnames(feature_matrix_simple_22), '_radius'))
-
-
-spats_unnorm = str_subset(uni_stats, 'Normalized',negate = TRUE)
-m = matrix(NA,nrow = length(rownames(feature_matrix_simple_22)), ncol = length(spats_unnorm))
-rownames(m) = rownames(feature_matrix_simple_22)
-colnames(m) = spats_unnorm
-
-for (patient in rownames(feature_matrix_simple_22)){
-  for (stat in spats_unnorm){
-    unnorm = feature_matrix_simple_22[patient,stat]
-    nnorm = feature_matrix_simple_22[patient,paste0('Normalized_',stat)]
-    width_sign_band = unnorm/nnorm
-    m[patient,stat] = width_sign_band
-  }
+for (r in 1:length(radius)) {
+    feats = c()
+    for (rs in radius[[r]]) {
+        feats = c(feats, grep(paste0('r=', as.character(rs), '$'), df$feat_group, value=T))
+    }
+    ftypes[[paste0('Poisson, ',names(radius)[r])]] = unique(feats)
 }
 
-width_sign_band_min = apply(m,1,function(x) min(x,na.rm = TRUE))
-width_sign_band_max = apply(m,1,function(x) max(x,na.rm = TRUE))
+freq$category = NA
+for (i in 1:length(ftypes)){
+    freq$category[freq$Var1%in%ftypes[[i]]] = names(ftypes)[i]
+}
 
-# min(width_sign_band_min) = 2.556935e-05
-# max(width_sign_band_max) = 172298.4
-
-
-# m = matrix(1:36,nrow = 6)
-# rownames(m) = list('HO105-097_[9517,43652]', 'HO105-097_[8938,43999]', 'HO105-097_[11295,45384]', 'HO105-121_[8016,47627]', 'HO105-083_[20684,34346]', 'HO105-083_[14332,34366]')
-# colnames(m) = letters[1:6]
-# m[4] = NA
-# mat = m
-
-# NaN -> apply(matrix(c(NA,1:4),nrow = 1),2, mean, na.rm = TRUE)
-
+freq$category = factor(freq$category, levels =names(ftypes))
+freq$Feat = unlist(lapply(freq$Var1, function(x) strsplit(as.character(x), ',')[[1]][1]))
+freq$Feat = gsub('_', ' ', freq$Feat, fixed=T)
+freq$Var1 = factor(freq$Var1, levels=freq$Var1[order(freq$category)])
+freq$Feat = factor(freq$Feat, levels=unique(freq$Feat[order(freq$category)]))
+ggplot(freq[!is.na(freq$category),], aes(x=Feat, y=Freq, fill=category)) + geom_bar(stat='identity') + theme_bw() +
+    theme(axis.text.x = element_text(angle=90, vjust=1, hjust=1)) + scale_fill_manual(values=color) + 
+    xlab("Feature type") + ylab("# of features")
 
 ```
 
-```{r clinical vs prediction data 26nd Jun, eval=F}
-source('spatstat_vectra.R')
-
-# import simplified matrix
-
-feature_matrix_simple_26 = readRDS(path.expand('~/Studie/Thesis - Local/Extracted_Features_26ndJun.RDS'))
-
-NAs_per_sample_all_cols = rowSums((is.na(feature_matrix_simple_26)))
-table(NAs_per_sample_all_cols)
-# NAs_per_sample_all_cols
-#   0   3   4   7   8  10  11  12  15  16  20  24  26  30  34  38 669 672 675 
-# 443   1 334   5 220   1   1 103   1  31  16   7   4   2   1   2   6   5   3
-df_and_NAs_all_colls = cbind(NAs_per_sample_all_cols,feature_matrix_simple_26)
-View(df_and_NAs_all_colls)
 
 
-cols_without_J = str_subset(colnames(feature_matrix_simple_26),'J_radius', negate = TRUE)
-cols_without_Jdot = str_subset(colnames(feature_matrix_simple_26),'Jdot_radius', negate = TRUE)
-cols_without_J_Total = intersect(cols_without_J, cols_without_Jdot)
-feature_matrix_simple_26_without_J = feature_matrix_simple_26[,cols_without_J_Total]
+## Session Information
 
-
-NAs_per_sample = rowSums((is.na(feature_matrix_simple_26_without_J)))
-table(NAs_per_sample)
-#    0    3    6   26  541 
-# 1155    7    1    9   14
-# View(feature_matrix_simple_26_without_J[rowSums((is.na(feature_matrix_simple_26_without_J)))>0,])
-df_and_NAs = cbind(NAs_per_sample,feature_matrix_simple_26_without_J)
-View(df_and_NAs)
-
-# 541 NAs is when a phenotype count has 0
-# 26 NAs is when a phenotype count has 1
-# 6 and 3 NAs is when a phenotype has extensively many counts (over 4000)
-
-# samples with 3 NA's have loooooooots of TUmors and results in a Fstatistic of NA for large radi: 30,40,50
-threes = df_and_NAs[threes_names <- c('HO105-033_[20154,47207]','HO105-183_[10192,36437]', 'HO105-183_[11016,38792]', 'HO105-183_[15933,32458]', 'HO105-183_[16366,40912]', 'HO105-183_[18063,33897]',  'HO105-183_[9034,45388]'),str_subset(colnames(feature_matrix_simple_26),'F')] # test for F30,40,50 ook normalized geeft daardoor 0
-# samples with 6 NA's have
-sixes = df_and_NAs[sixes_names <- 'HO105-061_[11807,41972]',str_subset(colnames(feature_matrix_simple_26),'F')] # test for F30,40,50 ook normalized geeft daardoor 0
-
-# samples with 26 NA's have a count of 1 for a phenotype
-
-# sum(feature_matrix_simple_22 == feature_matrix_simple_26,na.rm = TRUE)+sum(is.na(feature_matrix_simple_22)) = 1186*1686 so both matrices are the same.
-
-```
-
-```{r clinical vs prediction data 30nd Jun, eval=F}
-source('spatstat_vectra.R')
-
-# import simplified matrix
-
-feature_matrix_simple_30 = readRDS(path.expand('~/Studie/Thesis - Local/Extracted_Features_30thJun.RDS'))
-
-NAs_per_sample_all_cols = rowSums((is.na(feature_matrix_simple_30)))
-# table(NAs_per_sample_all_cols)
-# NAs_per_sample_all_cols
-#   0   4   8  12  16  20  24  25  26  28  29  30  32  36  37  38  40  41  42  43  44  48  52  54  56  58  60  62  64  66 669 678 684 687 690 693 
-# 248  56  23  60 154 106  98   1   1 108   1   1 152  77   1   3  48   2   1   1  14   4   2   1   2   1   2   2   1   1   4   3   1   2   3   1 
-# Quite a few NA's because of J-statistic
-df_and_NAs_all_colls = cbind(NAs_per_sample_all_cols,feature_matrix_simple_30)
-
-
-
-cols_without_J = str_subset(colnames(feature_matrix_simple_30),'J_radius', negate = TRUE)
-cols_without_Jdot = str_subset(colnames(feature_matrix_simple_30),'Jdot_radius', negate = TRUE)
-cols_without_J_Total = intersect(cols_without_J, cols_without_Jdot)
-feature_matrix_simple_30_without_J = feature_matrix_simple_30[,cols_without_J_Total]
-
-
-NAs_per_sample = rowSums((is.na(feature_matrix_simple_30_without_J)))
-table(NAs_per_sample)
-#    0   26  541 
-# 1163    9   14
-# Without J-statistic it is more consistent
-
-# 541 NAs is when a phenotype count has 0, expected outcome
-# 26 NAs is when a phenotype count has 1, expected outcome
-
-View(feature_matrix_simple_30_without_J)
-
-saveRDS(feature_matrix_simple_30_without_J,file = path.expand('~/Studie/Thesis - Local/Extracted_Features_1stJuly_Simple.RDS'))
-
+```{r session}
+sessionInfo()
 ```
 
